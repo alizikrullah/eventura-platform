@@ -1,7 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-
+import authRouter from './routes/auth'
 dotenv.config();
 
 const app: Application = express();
@@ -28,6 +28,8 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // import authRoutes from './routes/auth.routes';
 // app.use('/api/auth', authRoutes);
 
+app.use('/api/auth', authRouter)
+
 // 404 handler
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ 
@@ -45,5 +47,7 @@ app.use((err: any, _req: Request, res: Response, _next: any) => {
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
+
+
 
 export default app;

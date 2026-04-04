@@ -46,7 +46,6 @@ CREATE TABLE "events" (
     "description" TEXT,
     "location" TEXT NOT NULL,
     "venue" TEXT,
-    "price" INTEGER NOT NULL DEFAULT 0,
     "total_seats" INTEGER NOT NULL,
     "available_seats" INTEGER NOT NULL,
     "start_date" TIMESTAMP(3) NOT NULL,
@@ -119,12 +118,12 @@ CREATE TABLE "points" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "amount" INTEGER NOT NULL,
+    "amount_remaining" INTEGER NOT NULL,
     "source" "PointSource" NOT NULL,
     "reference_id" INTEGER,
     "expired_at" TIMESTAMP(3) NOT NULL,
-    "is_used" BOOLEAN NOT NULL DEFAULT false,
-    "used_at" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "points_pkey" PRIMARY KEY ("id")
 );
@@ -143,6 +142,7 @@ CREATE TABLE "transactions" (
     "points_used" INTEGER NOT NULL DEFAULT 0,
     "final_price" INTEGER NOT NULL,
     "status" "TransactionStatus" NOT NULL DEFAULT 'waiting_payment',
+    "is_attended" BOOLEAN NOT NULL DEFAULT false,
     "payment_proof" TEXT,
     "payment_uploaded_at" TIMESTAMP(3),
     "payment_expired_at" TIMESTAMP(3),
@@ -255,7 +255,7 @@ CREATE INDEX "user_coupons_user_id_is_used_expired_at_idx" ON "user_coupons"("us
 CREATE INDEX "points_user_id_idx" ON "points"("user_id");
 
 -- CreateIndex
-CREATE INDEX "points_user_id_is_used_expired_at_idx" ON "points"("user_id", "is_used", "expired_at");
+CREATE INDEX "points_user_id_amount_remaining_expired_at_idx" ON "points"("user_id", "amount_remaining", "expired_at");
 
 -- CreateIndex
 CREATE INDEX "points_source_idx" ON "points"("source");
