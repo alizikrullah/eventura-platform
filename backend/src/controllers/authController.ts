@@ -20,3 +20,24 @@ export async function login(req: Request, res: Response) {
     return res.status(400).json({ error: err.message || 'Bad Request' })
   }
 }
+
+export async function forgotPassword(req: Request, res: Response) {
+  try {
+    const { email } = req.body
+    const result = await authService.forgotPassword(email)
+    return res.json(result)
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message || 'Bad Request' })
+  }
+}
+
+export async function resetPassword(req: Request, res: Response) {
+  try {
+    const { token, newPassword } = req.body
+    const result = await authService.resetPassword(token, newPassword)
+    return res.json(result)
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message || 'Bad Request' })
+  }
+}
+

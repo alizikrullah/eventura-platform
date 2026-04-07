@@ -9,7 +9,7 @@ Event management platform - Marketplace untuk beli & jual tiket event.
 - Prisma ORM
 - PostgreSQL (Neon)
 - JWT Authentication
-- Multer (file upload)
+- Multer + Cloudinary (file upload)
 - Nodemailer (email notifications)
 - Node-cron (scheduled tasks)
 
@@ -19,7 +19,7 @@ Event management platform - Marketplace untuk beli & jual tiket event.
 - Tailwind CSS + Shadcn UI
 - Zustand (state management)
 - React Router v6
-- React Hook Form + Zod
+- Formik + Yup
 - Axios
 
 ## Project Structure
@@ -111,6 +111,15 @@ cd frontend
 npm install
 ```
 
+**Setup Frontend Environment Variables:**
+
+```bash
+cp .env.example .env
+```
+
+Isi `.env` frontend:
+- `VITE_API_BASE_URL=http://localhost:5000/api`
+
 **Start Frontend:**
 
 ```bash
@@ -118,6 +127,17 @@ npm run dev
 ```
 
 Frontend will run on `http://localhost:5173`
+
+**Available auth/profile routes:**
+```
+/login
+/register
+/forgot-password
+/reset-password?token=...
+/profile
+/organizer/dashboard
+/customer/dashboard
+```
 
 ## Development Workflow
 
@@ -152,9 +172,12 @@ frontend/src/
 ```
 POST   /api/auth/register
 POST   /api/auth/login
-GET    /api/auth/me
-POST   /api/auth/logout
-PUT    /api/auth/profile
+POST   /api/auth/forgot-password
+POST   /api/auth/reset-password
+GET    /api/users/me
+PATCH  /api/users/me
+PATCH  /api/users/me/password
+PATCH  /api/users/me/photo
 ```
 
 ### Ali - Week 2 onwards
@@ -215,9 +238,19 @@ npm run preview      # Preview production build
 ```
 DATABASE_URL=          # Neon PostgreSQL URL
 JWT_SECRET=            # JWT secret key
+JWT_EXPIRES_IN=7d
 PORT=5000
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
+UPLOAD_DIR=./uploads
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-api-key
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
+EMAIL_FROM="Eventura <noreply@eventura.com>"
 ```
 
 ## Deployment

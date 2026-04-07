@@ -1,13 +1,16 @@
 import { Request, Response, NextFunction } from 'express'
+import type { User } from '@prisma/client'
 import jwt from 'jsonwebtoken'
 import prisma from '../config/prisma'
 
-export async function auth(req: Request & { user?: any }, res: Response, next: NextFunction) {
+type AuthRequest = Request & { user?: User }
+
+export async function auth(req: AuthRequest, res: Response, next: NextFunction): Promise<Response | void> {
   const header = req.headers.authorization
   if (!header) return res.status(401).json({ message: 'Unauthorized' })
   const token = header.replace('Bearer ', '')
   try {
-    const payload: any = jwt.verify(token, process.env.JWT_SECRET || 'dev')
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev') as { userId: number }
     const user = await prisma.user.findUnique({ where: { id: payload.userId } })
     if (!user) return res.status(401).json({ message: 'Unauthorized' })
     req.user = user
@@ -18,9 +21,10 @@ export async function auth(req: Request & { user?: any }, res: Response, next: N
 }
 
 export function requireRole(roles: string[]) {
-  return (req: Request & { user?: any }, res: Response, next: NextFunction) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): Response | void => {
     if (!req.user) return res.status(401).json({ message: 'Unauthorized' })
     if (!roles.includes(req.user.role)) return res.status(403).json({ message: 'Forbidden' })
     next()
   }
 }
+
