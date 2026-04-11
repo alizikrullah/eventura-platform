@@ -33,7 +33,7 @@ export function LoginPage() {
           setServerError('')
           try {
             await auth.login(values)
-            navigate(auth.isOrganizer() ? '/organizer/dashboard' : '/customer/dashboard', { replace: true })
+            navigate('/', { replace: true })
           } catch (error: unknown) {
             setServerError('Email atau password salah. Silakan coba lagi.')
           } finally {

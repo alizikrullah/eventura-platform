@@ -4,6 +4,11 @@ import dotenv from 'dotenv';
 import multer from 'multer'
 import authRouter from './routes/auth'
 import userRouter from './routes/user'
+import categoryRouter from './routes/category'
+import eventRouter from './routes/event'
+import voucherRouter from './routes/voucher'
+import transactionRouter from './routes/transaction';
+import reviewRouter from './routes/review';
 dotenv.config();
 
 const app: Application = express();
@@ -32,6 +37,11 @@ app.get('/api/health', (_req: Request, res: Response) => {
 
 app.use('/api/auth', authRouter)
 app.use('/api/users', userRouter)
+app.use('/api/categories', categoryRouter)
+app.use('/api/events', eventRouter)
+app.use('/api/vouchers', voucherRouter)
+app.use('/api/transactions', transactionRouter);
+app.use('/api', reviewRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

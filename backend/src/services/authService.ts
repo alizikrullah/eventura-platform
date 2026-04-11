@@ -3,7 +3,7 @@ import jwt, { type SignOptions } from 'jsonwebtoken'
 import { Role } from '@prisma/client'
 import prisma from '../config/prisma'
 import { sendResetPasswordEmail } from './mailService'
-import { awardReferralBenefits } from './referralRewardService'
+import { awardReferralRewards } from './referralRewardService'
 
 interface RegisterPayload {
   name: string
@@ -83,14 +83,14 @@ export async function register(payload: RegisterPayload) {
     })
 
     if (referrerId) {
-      const referral = await tx.referral.create({
+      await tx.referral.create({
         data: {
           referrer_id: referrerId,
           referee_id: createdUser.id,
         },
       })
 
-      await awardReferralBenefits(tx, referrerId, createdUser.id, referral.id)
+      await awardReferralRewards(referrerId, createdUser.id)
     }
 
     return createdUser

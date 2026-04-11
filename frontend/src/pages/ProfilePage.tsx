@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Formik, Form, Field } from 'formik'
 import * as Yup from 'yup'
-import { Camera, KeyRound, LogOut, UserRound } from 'lucide-react'
+import { Camera, KeyRound, LogOut, UserRound, Coins } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -10,6 +10,8 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { useAuth } from '../hooks/useAuth'
 import { userService } from '../services/userService'
+import { useAuthStore } from '@/store/authStore'
+import axios from 'axios'
 
 const profileSchema = Yup.object({
   name: Yup.string().required('Nama wajib diisi'),
@@ -33,6 +35,11 @@ export function ProfilePage() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
   const [preview, setPreview] = useState<string | undefined>(auth.user?.profile_picture ?? undefined)
   const localPreviewUrlRef = useRef<string | null>(null)
+  const { token } = useAuthStore()
+  
+
+  // Points state
+  const [totalPoints, setTotalPoints] = useState<number>(0)
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -53,6 +60,19 @@ export function ProfilePage() {
 
     void loadProfile()
   }, [auth.isAuthenticated, auth.setUser])
+
+  // Fetch points
+  useEffect(() => {
+    if (!auth.isAuthenticated || !token) return
+    axios.get(`${import.meta.env.VITE_API_URL}/transactions/discounts`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => {
+        const points = res.data.data?.points?.total_points
+        if (typeof points === 'number') setTotalPoints(points)
+      })
+      .catch(() => {})
+}, [auth.isAuthenticated, token])
 
   useEffect(() => {
     return () => {
@@ -101,6 +121,23 @@ export function ProfilePage() {
             <LogOut className="h-4 w-4" /> Logout
           </Button>
         </div>
+
+        {/* Points Card - hanya tampil untuk customer */}
+        {auth.user.role === 'customer' && (
+          <div className="flex items-center gap-4 rounded-[28px] border border-white/60 bg-white/90 p-6 shadow-[0_24px_80px_rgba(30,58,138,0.12)] backdrop-blur">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-50">
+              <Coins className="h-6 w-6 text-yellow-500" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Poin kamu</p>
+              <p className="text-2xl font-bold text-slate-900">{totalPoints.toLocaleString('id-ID')} <span className="text-base font-normal text-slate-400">poin</span></p>
+            </div>
+            <div className="ml-auto text-right">
+              <p className="text-xs text-slate-400">Setara dengan</p>
+              <p className="text-sm font-semibold text-primary-700">Rp {totalPoints.toLocaleString('id-ID')}</p>
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <Card className="rounded-[28px] border-white/50 shadow-xl">

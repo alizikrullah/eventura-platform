@@ -1,4 +1,4 @@
-// Eventura Platform Database Schema
+// Eventura Platform Database Schema - UPDATED FOR MIDTRANS
 // PostgreSQL via Neon
 
 generator client {
@@ -22,9 +22,7 @@ enum DiscountType {
 
 enum TransactionStatus {
   waiting_payment
-  waiting_confirmation
-  done
-  rejected
+  paid
   expired
   canceled
 }
@@ -111,8 +109,8 @@ model Event {
 model TicketType {
   id                 Int      @id @default(autoincrement())
   event_id           Int
-  name               String   // e.g., VIP, Regular, Early Bird
-  price              Int      // in IDR, 0 = free
+  name               String
+  price              Int
   quantity           Int
   available_quantity Int
   description        String?  @db.Text
@@ -131,8 +129,8 @@ model Voucher {
   event_id       Int
   code           String       @unique
   discount_type  DiscountType
-  discount_value Int          // percentage (1-100) or fixed amount in IDR
-  max_usage      Int?         // null = unlimited
+  discount_value Int
+  max_usage      Int?
   current_usage  Int          @default(0)
   start_date     DateTime
   end_date       DateTime
@@ -168,7 +166,7 @@ model UserCoupon {
   coupon_id  Int
   is_used    Boolean   @default(false)
   used_at    DateTime?
-  expired_at DateTime  // 3 months from created_at
+  expired_at DateTime
   created_at DateTime  @default(now())
 
   // Relations
@@ -181,11 +179,12 @@ model UserCoupon {
   @@map("user_coupons")
 }
 
+
 model Point {
   id               Int         @id @default(autoincrement())
   user_id          Int
   amount           Int         // total amount credited
-  amount_remaining Int         // tracks partial usage
+  amount_remaining Int         // remaining balance (allows partial usage)
   source           PointSource
   reference_id     Int?        // transaction_id or referral user_id
   expired_at       DateTime    // 3 months from created_at
@@ -196,32 +195,29 @@ model Point {
   user User @relation(fields: [user_id], references: [id])
 
   @@index([user_id])
-  @@index([user_id, amount_remaining, expired_at])
-  @@index([source])
+  @@index([user_id, expired_at])
   @@map("points")
 }
 
+// ✅ UPDATED: Midtrans integration fields
 model Transaction {
-  id                      Int               @id @default(autoincrement())
-  user_id                 Int
-  event_id                Int
-  voucher_id              Int?
-  user_coupon_id          Int?
-  invoice_number          String            @unique
-  total_ticket_price      Int               // before discount
-  voucher_discount        Int               @default(0)
-  coupon_discount         Int               @default(0)
-  points_used             Int               @default(0)
-  final_price             Int               // after all discounts
-  status                  TransactionStatus @default(waiting_payment)
-  is_attended             Boolean           @default(false) // Validation for reviews
-  payment_proof           String?
-  payment_uploaded_at     DateTime?
-  payment_expired_at      DateTime?         // 2 hours from created_at
-  confirmation_expired_at DateTime?         // 3 days from payment upload
-  rejected_reason         String?           @db.Text
-  created_at              DateTime          @default(now())
-  updated_at              DateTime          @updatedAt
+  id                 Int               @id @default(autoincrement())
+  user_id            Int
+  event_id           Int
+  voucher_id         Int?
+  user_coupon_id     Int?
+  invoice_number     String            @unique
+  snap_token         String?           // ✅ NEW - Midtrans Snap token
+  midtrans_order_id  String?           // ✅ NEW - Midtrans order ID
+  total_ticket_price Int
+  voucher_discount   Int               @default(0)
+  coupon_discount    Int               @default(0)
+  points_used        Int               @default(0)
+  final_price        Int
+  status             TransactionStatus @default(waiting_payment)
+  payment_expired_at DateTime?         // 2 hours from created_at
+  created_at         DateTime          @default(now())
+  updated_at         DateTime          @updatedAt
 
   // Relations
   user              User              @relation(fields: [user_id], references: [id])
@@ -236,7 +232,6 @@ model Transaction {
   @@index([invoice_number])
   @@index([status])
   @@index([status, payment_expired_at])
-  @@index([status, confirmation_expired_at])
   @@map("transactions")
 }
 
@@ -244,10 +239,10 @@ model TransactionItem {
   id             Int        @id @default(autoincrement())
   transaction_id Int
   ticket_type_id Int?
-  ticket_name    String     // snapshot of ticket name
+  ticket_name    String
   quantity       Int
-  price          Int        // price per ticket in IDR
-  subtotal       Int        // quantity * price
+  price          Int
+  subtotal       Int
   created_at     DateTime   @default(now())
 
   // Relations
@@ -262,8 +257,8 @@ model Review {
   id             Int      @id @default(autoincrement())
   event_id       Int
   user_id        Int
-  transaction_id Int      @unique // one review per transaction
-  rating         Int      // 1-5
+  transaction_id Int      @unique
+  rating         Int
   comment        String?  @db.Text
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
@@ -281,8 +276,8 @@ model Review {
 
 model Referral {
   id             Int      @id @default(autoincrement())
-  referrer_id    Int      // user who gave referral
-  referee_id     Int      @unique // user who used referral (can only use once)
+  referrer_id    Int
+  referee_id     Int      @unique
   points_awarded Boolean  @default(false)
   coupon_awarded Boolean  @default(false)
   created_at     DateTime @default(now())

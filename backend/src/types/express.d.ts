@@ -1,16 +1,13 @@
-import type { User } from '@prisma/client'
-import type { Request } from 'express'
+// backend/src/types/express.d.ts
 
-export interface AuthenticatedRequest extends Request {
-  user: User
-}
+import { User } from '@prisma/client';
 
 declare global {
   namespace Express {
     interface Request {
-      user?: User
+      user?: User;
     }
   }
 }
 
-export {}
+export {};
