@@ -1,59 +1,86 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { AuthGuard } from './components/guards/AuthGuard'
-import { GuestOnlyGuard } from './components/guards/GuestOnlyGuard'
-import { RoleGuard } from './components/guards/RoleGuard'
-import { useAuth } from './hooks/useAuth'
-import { useAuthStore } from './store/authStore'
-import { CustomerDashboardPage } from './pages/CustomerDashboardPage'
-import { ForbiddenPage } from './pages/ForbiddenPage'
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
-import { LoginPage } from './pages/LoginPage'
-import { OrganizerDashboardPage } from './pages/OrganizerDashboardPage'
-import { ProfilePage } from './pages/ProfilePage'
-import { RegisterPage } from './pages/RegisterPage'
-import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthGuard } from './components/guards/AuthGuard';
+import { GuestOnlyGuard } from './components/guards/GuestOnlyGuard';
+import { RoleGuard } from './components/guards/RoleGuard';
+import { ForbiddenPage } from './pages/ForbiddenPage';
+import ScrollToTop from '@/components/ScrollToTop';
+import Layout from '@/components/layout/Layout';
+import LandingPage from '@/pages/LandingPage';
+import EventsPage from '@/pages/EventsPage';
+import AboutPage from '@/pages/AboutPage';
+import EventDetailPage from '@/pages/EventDetailPage';
+import CreateEventPage from '@/pages/CreateEventPage';
+import EditEventPage from '@/pages/EditEventPage';
+import MyEventsPage from '@/pages/MyEventsPage';
+import VoucherManagementPage from '@/pages/VoucherManagementPage';
+import CheckoutPage from '@/pages/CheckoutPage';
+import TransactionsPage from '@/pages/TransactionsPage';
+import TransactionDetailPage from '@/pages/TransactionDetailPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { RegisterPage } from '@/pages/RegisterPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { ProfilePage } from '@/pages/ProfilePage';
+import { CustomerDashboardPage } from '@/pages/CustomerDashboardPage';
+import { OrganizerDashboardPage } from '@/pages/OrganizerDashboardPage';
+import { useAuthStore } from '@/store/authStore';
 
-function HomeRedirect() {
-  const { user, isHydrated } = useAuthStore()
+export default function App() {
+  const hydrate = useAuthStore(state => state.hydrate);
 
-  if (!isHydrated) {
-    return <div className="flex min-h-screen items-center justify-center text-slate-600">Loading...</div>
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />
-  }
-
-  return <Navigate to={user.role === 'organizer' ? '/organizer/dashboard' : '/customer/dashboard'} replace />
-}
-
-function App() {
-  useAuth()
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
-        <Route path="/" element={<HomeRedirect />} />
+
+        {/* Auth pages - pakai AuthShell, guest only */}
         <Route element={<GuestOnlyGuard />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
-        <Route element={<AuthGuard />}>
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route element={<RoleGuard allowedRoles={['organizer']} />}>
-            <Route path="/organizer/dashboard" element={<OrganizerDashboardPage />} />
+
+        {/* Main pages - pakai Navbar + Footer */}
+        <Route element={<Layout />}>
+
+          {/* Public routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/:id" element={<EventDetailPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/403" element={<ForbiddenPage />} />
+
+          {/* Protected routes - semua role */}
+          <Route element={<AuthGuard />}>
+            <Route path="/profile" element={<ProfilePage />} />
+
+            {/* Customer only */}
+            <Route element={<RoleGuard allowedRoles={['customer']} />}>
+              <Route path="/customer/dashboard" element={<CustomerDashboardPage />} />
+              <Route path="/transactions" element={<TransactionsPage />} />
+              <Route path="/transactions/:id" element={<TransactionDetailPage />} />
+              <Route path="/checkout/:eventId" element={<CheckoutPage />} />
+            </Route>
+
+            {/* Organizer only */}
+            <Route element={<RoleGuard allowedRoles={['organizer']} />}>
+              <Route path="/organizer/dashboard" element={<OrganizerDashboardPage />} />
+              <Route path="/organizer/events" element={<MyEventsPage />} />
+              <Route path="/organizer/events/create" element={<CreateEventPage />} />
+              <Route path="/organizer/events/:id/edit" element={<EditEventPage />} />
+              <Route path="/organizer/events/:id/vouchers" element={<VoucherManagementPage />} />
+            </Route>
           </Route>
-          <Route element={<RoleGuard allowedRoles={['customer']} />}>
-            <Route path="/customer/dashboard" element={<CustomerDashboardPage />} />
-          </Route>
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
-        <Route path="/403" element={<ForbiddenPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
-
-export default App

@@ -43,7 +43,7 @@ export function RegisterPage() {
               role: values.role,
               referralCode: values.referralCode || undefined,
             })
-            navigate(values.role === 'organizer' ? '/organizer/dashboard' : '/customer/dashboard', { replace: true })
+            navigate('/', { replace: true })
           } catch (error: unknown) {
             setServerError(error instanceof Error ? error.message : 'Register gagal')
           } finally {
