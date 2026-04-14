@@ -95,7 +95,7 @@ export default function MyEventsPage() {
             <h1 className="text-2xl font-extrabold text-gray-900">My Events</h1>
             <p className="text-sm text-gray-400 mt-1">Kelola semua event yang kamu buat</p>
           </div>
-          <Link to="/organizer/events/create"
+          <Link to="/organizer/dashboard/events/create"
             className="flex items-center gap-2 bg-primary-900 hover:bg-primary-800 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors shadow-sm">
             <Plus className="w-4 h-4" /> Buat Event
           </Link>
@@ -108,7 +108,7 @@ export default function MyEventsPage() {
             </div>
             <h3 className="text-lg font-bold text-gray-700 mb-2">Belum ada event</h3>
             <p className="text-sm text-gray-400 mb-6">Mulai buat event pertamamu sekarang!</p>
-            <Link to="/organizer/events/create"
+            <Link to="/organizer/dashboard/events/create"
               className="inline-flex items-center gap-2 bg-primary-900 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-primary-800 transition-colors text-sm">
               <Plus className="w-4 h-4" /> Buat Event
             </Link>
@@ -171,11 +171,11 @@ export default function MyEventsPage() {
                           className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-colors">
                           <Eye className="w-3.5 h-3.5" /> Lihat
                         </Link>
-                        <Link to={`/organizer/events/${event.id}/edit`}
+                        <Link to={`/organizer/dashboard/events/${event.id}/edit`}
                           className="flex items-center gap-1.5 text-xs font-semibold text-primary-900 border border-primary-200 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition-colors">
                           <Pencil className="w-3.5 h-3.5" /> Edit
                         </Link>
-                        <Link to={`/organizer/events/${event.id}/vouchers`}
+                        <Link to={`/organizer/dashboard/events/${event.id}/vouchers`}
                           className="flex items-center gap-1.5 text-xs font-semibold text-secondary-500 border border-secondary-200 px-3 py-1.5 rounded-lg hover:bg-secondary-50 transition-colors">
                           <Tag className="w-3.5 h-3.5" /> Voucher
                         </Link>

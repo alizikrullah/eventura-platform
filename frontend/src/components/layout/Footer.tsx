@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Calendar, Instagram, Twitter, Mail } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const { user, isAuthenticated } = useAuthStore();
 
   return (
     <footer className="bg-primary-950 text-white mt-auto">
@@ -49,34 +51,18 @@ export default function Footer() {
             <ul className="space-y-2.5">
               <li>
                 <Link
+                  to="/about"
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  About
+                </Link>
+              </li>
+              <li>
+                <Link
                   to="/events"
                   className="text-sm text-gray-400 hover:text-white transition-colors"
                 >
-                  Browse Events
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/events?category=music"
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
-                >
-                  Musik
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/events?category=technology"
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
-                >
-                  Teknologi
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/events?category=sports"
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
-                >
-                  Olahraga
+                  Events
                 </Link>
               </li>
             </ul>
@@ -88,38 +74,83 @@ export default function Footer() {
               Akun
             </h4>
             <ul className="space-y-2.5">
-              <li>
-                <Link
-                  to="/login"
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
-                >
-                  Login
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/register"
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
-                >
-                  Daftar
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/transactions"
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
-                >
-                  My Tickets
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/profile"
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
-                >
-                  Profile
-                </Link>
-              </li>
+              {!isAuthenticated ? (
+                <>
+                  {/* Mode 1: Belum Login */}
+                  <li>
+                    <Link
+                      to="/register"
+                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      Register
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/login"
+                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      Login
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/profile"
+                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      Profile
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/transactions"
+                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      My Ticket
+                    </Link>
+                  </li>
+                </>
+              ) : user?.role === 'customer' ? (
+                <>
+                  {/* Mode 2: Login (Customer) */}
+                  <li>
+                    <Link
+                      to="/profile"
+                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      Profile
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/transactions"
+                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      My Ticket
+                    </Link>
+                  </li>
+                </>
+              ) : (
+                <>
+                  {/* Mode 3: Login (Organizer) */}
+                  <li>
+                    <Link
+                      to="/profile"
+                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      Profile
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/organizer/dashboard/overview"
+                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      Dashboard
+                    </Link>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         </div>
@@ -130,7 +161,7 @@ export default function Footer() {
             &copy; {currentYear} Eventura. All rights reserved.
           </p>
           <p className="text-xs text-gray-600">
-            Made with ♥ for Purwadhika Mini Project
+            Made for Purwadhika Mini Project
           </p>
         </div>
       </div>

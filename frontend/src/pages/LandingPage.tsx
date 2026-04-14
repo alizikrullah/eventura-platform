@@ -8,7 +8,7 @@ interface Event {
   name: string;
   location: string;
   start_date: string;
-  price: number;
+  min_price?: number;
   available_seats: number;
   image_url?: string;
   category?: { name: string };
@@ -32,9 +32,10 @@ const CATEGORY_ICONS: Record<string, { icon: React.ElementType; color: string; b
   Photography: { icon: Camera,          color: 'text-cyan-600',   bg: 'bg-cyan-50' },
 };
 
-function formatPrice(price: number) {
-  if (price === 0) return 'Gratis';
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price);
+function formatPrice(price?: number | null) {
+  const numPrice = Number(price) || 0;
+  if (numPrice === 0) return 'Gratis';
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(numPrice);
 }
 
 function formatDate(dateStr: string) {
@@ -46,17 +47,18 @@ export default function LandingPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [eventsRes, categoriesRes] = await Promise.all([
-          axios.get('/events?limit=6&sort=newest'),
-          axios.get('/categories'),
+          axios.get(`${import.meta.env.VITE_API_URL}/events?limit=6&sort=newest`),
+          axios.get(`${import.meta.env.VITE_API_URL}/categories`),
         ]);
         setEvents(eventsRes.data.data?.events || eventsRes.data.data || []);
-        setCategories(categoriesRes.data.data || []);
+        setCategories(categoriesRes.data.data?.categories || []);
       } catch (err) {
         console.error('Failed to fetch landing data', err);
       } finally {
@@ -68,6 +70,13 @@ export default function LandingPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Debounce mechanism - prevent spam clicking
+    if (isSearching) return;
+    
+    setIsSearching(true);
+    setTimeout(() => setIsSearching(false), 500); // 500ms debounce
+    
     if (search.trim()) navigate(`/events?search=${encodeURIComponent(search.trim())}`);
     else navigate('/events');
   };
@@ -116,9 +125,10 @@ export default function LandingPage() {
               />
               <button
                 type="submit"
-                className="bg-primary-900 hover:bg-primary-800 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shrink-0"
+                disabled={isSearching}
+                className="bg-primary-900 hover:bg-primary-800 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cari
+                {isSearching ? 'Mencari...' : 'Cari'}
               </button>
             </div>
           </form>
@@ -236,7 +246,7 @@ export default function LandingPage() {
                       </span>
                     )}
                     {/* free badge */}
-                    {event.price === 0 && (
+                    {(!event.min_price || event.min_price === 0) && (
                       <span className="absolute top-3 right-3 bg-success-500 text-white text-xs font-semibold px-2.5 py-1 rounded-lg">
                         Gratis
                       </span>
@@ -266,7 +276,7 @@ export default function LandingPage() {
 
                     <div className="flex items-center justify-between pt-3 border-t border-gray-50">
                       <span className="text-lg font-extrabold text-primary-900">
-                        {formatPrice(event.price)}
+                        {formatPrice(event.min_price)}
                       </span>
                       {event.average_rating && event.average_rating > 0 ? (
                         <div className="flex items-center gap-1">
@@ -308,13 +318,13 @@ export default function LandingPage() {
               <p className="text-primary-200 text-sm md:text-base mb-8 max-w-lg mx-auto">
                 Daftar sebagai organizer dan mulai jual tiket event kamu sekarang. Gratis, mudah, dan langsung bisa diakses ribuan pembeli.
               </p>
-              <Link
-                to="/register"
+              <a
+                href="mailto:support@eventura.com?subject=Pendaftaran%20Organizer&body=Halo%20Eventura%2C%0A%0ASaya%20ingin%20mendaftar%20sebagai%20organizer.%0A%0ANama%3A%20%0AEmail%3A%20%0ANo%20HP%3A%20%0ANama%20Event%2FOrganisasi%3A%20%0A%0ATerima%20kasih!"
                 className="inline-flex items-center gap-2 bg-secondary-400 hover:bg-secondary-500 text-white font-bold px-8 py-3.5 rounded-xl transition-colors shadow-lg"
               >
                 Daftar Jadi Organizer
                 <ArrowRight className="w-4 h-4" />
-              </Link>
+              </a>
             </div>
           </div>
         </div>

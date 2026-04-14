@@ -78,7 +78,7 @@ export default function VoucherManagementPage() {
   const fetchData = async () => {
     try {
       const [vouchersRes, eventRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL}/organizer/vouchers?event_id=${eventId}`, {
+        axios.get(`${import.meta.env.VITE_API_URL}/vouchers?event_id=${eventId}&is_active=true`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         axios.get(`${import.meta.env.VITE_API_URL}/events/${eventId}`),
@@ -150,7 +150,9 @@ export default function VoucherManagementPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        await axios.post(`${import.meta.env.VITE_API_URL}/events/${eventId}/vouchers`, payload, {
+        // Only include event_id when creating
+        payload.event_id = Number(eventId);
+        await axios.post(`${import.meta.env.VITE_API_URL}/vouchers`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }

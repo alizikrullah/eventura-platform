@@ -285,6 +285,7 @@ export const updateVoucher = async (
   const voucher = await prisma.voucher.update({
     where: { id },
     data: {
+      ...(payload.code && { code: payload.code }),
       ...(payload.discount_type && { discount_type: payload.discount_type }),
       ...(payload.discount_value !== undefined && { discount_value: payload.discount_value }),
       ...(payload.max_usage !== undefined && { max_usage: payload.max_usage }),
@@ -306,7 +307,7 @@ export const updateVoucher = async (
 };
 
 /**
- * Delete voucher (soft delete)
+ * Delete voucher (hard delete)
  */
 export const deleteVoucher = async (
   id: number,
@@ -329,12 +330,9 @@ export const deleteVoucher = async (
     throw new Error('Cannot delete voucher that has been used in transactions');
   }
 
-  // Soft delete
-  const voucher = await prisma.voucher.update({
-    where: { id },
-    data: {
-      is_active: false
-    }
+  // Hard delete - remove from database permanently
+  const voucher = await prisma.voucher.delete({
+    where: { id }
   });
 
   return voucher;
