@@ -11,6 +11,7 @@ export interface CreateVoucherPayload {
 }
 
 export interface UpdateVoucherPayload {
+  code?: string;
   discount_type?: 'percentage' | 'fixed';
   discount_value?: number;
   max_usage?: number | null;

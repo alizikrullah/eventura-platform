@@ -6,14 +6,11 @@ import { RoleGuard } from './components/guards/RoleGuard';
 import { ForbiddenPage } from './pages/ForbiddenPage';
 import ScrollToTop from '@/components/ScrollToTop';
 import Layout from '@/components/layout/Layout';
+import OrganizerLayout from '@/components/layout/OrganizerLayout';
 import LandingPage from '@/pages/LandingPage';
 import EventsPage from '@/pages/EventsPage';
 import AboutPage from '@/pages/AboutPage';
 import EventDetailPage from '@/pages/EventDetailPage';
-import CreateEventPage from '@/pages/CreateEventPage';
-import EditEventPage from '@/pages/EditEventPage';
-import MyEventsPage from '@/pages/MyEventsPage';
-import VoucherManagementPage from '@/pages/VoucherManagementPage';
 import CheckoutPage from '@/pages/CheckoutPage';
 import TransactionsPage from '@/pages/TransactionsPage';
 import TransactionDetailPage from '@/pages/TransactionDetailPage';
@@ -22,7 +19,15 @@ import { RegisterPage } from '@/pages/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { CustomerDashboardPage } from '@/pages/CustomerDashboardPage';
-import { OrganizerDashboardPage } from '@/pages/OrganizerDashboardPage';
+
+// Organizer pages
+import DashboardOverviewPage from '@/pages/organizer/DashboardOverviewPage';
+import MyEventsPage from '@/pages/organizer/MyEventsPage';
+import CreateEventPage from '@/pages/organizer/CreateEventPage';
+import EditEventPage from '@/pages/organizer/EditEventPage';
+import VoucherManagementPage from '@/pages/organizer/VoucherManagementPage';
+import TransactionsManagementPage from '@/pages/organizer/TransactionsManagementPage';
+
 import { useAuthStore } from '@/store/authStore';
 
 export default function App() {
@@ -66,13 +71,20 @@ export default function App() {
               <Route path="/checkout/:eventId" element={<CheckoutPage />} />
             </Route>
 
-            {/* Organizer only */}
+            {/* Organizer only - NESTED ROUTES dengan Sidebar Layout */}
             <Route element={<RoleGuard allowedRoles={['organizer']} />}>
-              <Route path="/organizer/dashboard" element={<OrganizerDashboardPage />} />
-              <Route path="/organizer/events" element={<MyEventsPage />} />
-              <Route path="/organizer/events/create" element={<CreateEventPage />} />
-              <Route path="/organizer/events/:id/edit" element={<EditEventPage />} />
-              <Route path="/organizer/events/:id/vouchers" element={<VoucherManagementPage />} />
+              <Route path="/organizer/dashboard" element={<OrganizerLayout />}>
+                {/* Default redirect ke overview */}
+                <Route index element={<Navigate to="overview" replace />} />
+                
+                {/* Nested routes - render di dalam OrganizerLayout Outlet */}
+                <Route path="overview" element={<DashboardOverviewPage />} />
+                <Route path="events" element={<MyEventsPage />} />
+                <Route path="events/create" element={<CreateEventPage />} />
+                <Route path="events/:id/edit" element={<EditEventPage />} />
+                <Route path="events/:id/vouchers" element={<VoucherManagementPage />} />
+                <Route path="transactions" element={<TransactionsManagementPage />} />
+              </Route>
             </Route>
           </Route>
 

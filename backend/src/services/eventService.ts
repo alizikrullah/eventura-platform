@@ -231,6 +231,11 @@ export const createEvent = async (
     ticket_types,
   } = payload
 
+  // Parse ticket_types if it's a JSON string (from FormData)
+  const ticketTypesArray: any[] = typeof ticket_types === 'string' 
+    ? JSON.parse(ticket_types) 
+    : ticket_types
+
   // Upload image to Cloudinary if provided
   let image_url: string | undefined
 
@@ -258,9 +263,9 @@ export const createEvent = async (
       image_url,
       is_active: true,
       // Create ticket types if provided
-      ...(ticket_types && ticket_types.length > 0 && {
+      ...(ticketTypesArray && ticketTypesArray.length > 0 && {
         ticket_types: {
-          create: ticket_types.map((tt) => ({
+          create: ticketTypesArray.map((tt) => ({
             name: tt.name,
             price: Number(tt.price),
             quantity: Number(tt.available_quantity), // Total quantity
@@ -382,7 +387,7 @@ export const updateEvent = async (
 }
 
 /**
- * Delete event (soft delete)
+ * Delete event (hard delete)
  */
 export const deleteEvent = async (eventId: number, organizerId: number) => {
   // Check if event exists and belongs to organizer
@@ -412,10 +417,55 @@ export const deleteEvent = async (eventId: number, organizerId: number) => {
     throw new Error('Cannot delete event with active transactions')
   }
 
-  // Soft delete (set is_active = false)
-  await prisma.event.update({
-    where: { id: eventId },
-    data: { is_active: false },
+  // Delete image from Cloudinary if exists
+  if (existingEvent.image_url) {
+    const urlParts = existingEvent.image_url.split('/')
+    const filename = urlParts[urlParts.length - 1].split('.')[0]
+    const folder = urlParts[urlParts.length - 2]
+    const publicId = `${folder}/${filename}`
+
+    try {
+      await deleteFromCloudinary(publicId)
+    } catch (error) {
+      console.error('Failed to delete image from Cloudinary:', error)
+    }
+  }
+
+  // Delete all related data first (to avoid foreign key constraint errors)
+  await prisma.$transaction(async (tx) => {
+    // Delete reviews
+    await tx.review.deleteMany({
+      where: { event_id: eventId },
+    })
+
+    // Delete vouchers
+    await tx.voucher.deleteMany({
+      where: { event_id: eventId },
+    })
+
+    // Delete ticket types
+    await tx.ticketType.deleteMany({
+      where: { event_id: eventId },
+    })
+
+    // Delete transaction items (if any)
+    await tx.transactionItem.deleteMany({
+      where: {
+        transaction: {
+          event_id: eventId,
+        },
+      },
+    })
+
+    // Delete transactions
+    await tx.transaction.deleteMany({
+      where: { event_id: eventId },
+    })
+
+    // Finally, delete the event itself
+    await tx.event.delete({
+      where: { id: eventId },
+    })
   })
 
   return { message: 'Event deleted successfully' }
