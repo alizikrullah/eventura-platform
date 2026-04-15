@@ -5,6 +5,7 @@ import {
   AlertCircle, Loader2, CheckCircle, XCircle
 } from 'lucide-react';
 import axios from 'axios';
+import { ConfirmActionDialog } from '@/components/ui/confirm-action-dialog';
 import { useAuthStore } from '@/store/authStore';
 
 interface Voucher {
@@ -71,7 +72,7 @@ export default function VoucherManagementPage() {
   const [saving, setSaving] = useState(false);
 
   // Delete state
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [voucherToDelete, setVoucherToDelete] = useState<Voucher | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
@@ -172,7 +173,7 @@ export default function VoucherManagementPage() {
       await axios.delete(`${import.meta.env.VITE_API_URL}/vouchers/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setDeleteId(null);
+      setVoucherToDelete(null);
       fetchData();
     } catch (err: any) {
       setDeleteError(err.response?.data?.message || 'Gagal menghapus voucher.');
@@ -199,7 +200,7 @@ export default function VoucherManagementPage() {
             className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4 transition-colors">
             <ChevronLeft className="w-4 h-4" /> Kembali
           </button>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-extrabold text-gray-900">Voucher</h1>
               {eventName && <p className="text-sm text-gray-400 mt-1">{eventName}</p>}
@@ -287,32 +288,13 @@ export default function VoucherManagementPage() {
                           className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-500 hover:border-primary-900 hover:text-primary-900 hover:bg-primary-50 transition-colors">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => { setDeleteId(v.id); setDeleteError(''); }}
+                        <button onClick={() => { setVoucherToDelete(v); setDeleteError(''); }}
                           className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-500 hover:border-red-400 hover:text-red-500 hover:bg-red-50 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
                   </div>
-
-                  {/* Delete Confirm */}
-                  {deleteId === v.id && (
-                    <div className="border-t border-red-100 bg-red-50 px-5 py-4">
-                      <p className="text-sm font-bold text-red-700 mb-1">Hapus voucher {v.code}?</p>
-                      {deleteError && <p className="text-xs text-red-600 mb-2">{deleteError}</p>}
-                      <div className="flex gap-2">
-                        <button onClick={() => setDeleteId(null)}
-                          className="flex-1 py-2 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-white transition-colors">
-                          Batal
-                        </button>
-                        <button onClick={() => handleDelete(v.id)} disabled={deleting}
-                          className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
-                          {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                          {deleting ? 'Menghapus...' : 'Ya, Hapus'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -437,6 +419,26 @@ export default function VoucherManagementPage() {
           </div>
         </>
       )}
+
+      <ConfirmActionDialog
+        open={Boolean(voucherToDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setVoucherToDelete(null);
+            setDeleteError('');
+          }
+        }}
+        title="Hapus voucher ini?"
+        description={voucherToDelete ? `Voucher ${voucherToDelete.code} akan dihapus dari event ini.` : 'Voucher yang dihapus tidak bisa dikembalikan.'}
+        confirmLabel="Ya, Hapus"
+        loading={deleting}
+        errorMessage={deleteError}
+        onConfirm={() => {
+          if (voucherToDelete) {
+            void handleDelete(voucherToDelete.id);
+          }
+        }}
+      />
     </div>
   );
 }

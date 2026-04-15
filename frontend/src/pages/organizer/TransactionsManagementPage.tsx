@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Loader2, XCircle } from 'lucide-react'
+import { ConfirmActionDialog } from '@/components/ui/confirm-action-dialog'
 import { organizerTransactionService } from '@/services/organizerTransactionService'
 import type { OrganizerTransactionItem, OrganizerTransactionStatus } from '@/types/transaction'
 
@@ -49,6 +50,7 @@ export default function TransactionsManagementPage() {
   const [pageLoadingId, setPageLoadingId] = useState<number | null>(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [pendingRejectTransaction, setPendingRejectTransaction] = useState<OrganizerTransactionItem | null>(null)
 
   const loadTransactions = async (status?: string) => {
     setLoading(true)
@@ -70,9 +72,6 @@ export default function TransactionsManagementPage() {
   }, [statusFilter])
 
   const handleReject = async (transactionId: number) => {
-    const confirmed = window.confirm('Batalkan transaksi ini? Action ini hanya valid sebelum Midtrans mengonfirmasi pembayaran. Seats, points, coupon, dan voucher akan direstore jika terpakai.')
-    if (!confirmed) return
-
     setPageLoadingId(transactionId)
     setErrorMessage('')
     setSuccessMessage('')
@@ -80,6 +79,7 @@ export default function TransactionsManagementPage() {
     try {
       const result = await organizerTransactionService.rejectTransaction(transactionId)
       setSuccessMessage(result.message)
+      setPendingRejectTransaction(null)
       await loadTransactions(statusFilter || undefined)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Gagal menolak transaksi')
@@ -87,6 +87,8 @@ export default function TransactionsManagementPage() {
       setPageLoadingId(null)
     }
   }
+
+  const hasActiveFilter = Boolean(statusFilter)
 
   return (
     <div>
@@ -126,11 +128,27 @@ export default function TransactionsManagementPage() {
         </div>
       ) : transactions.length === 0 ? (
         <div className="px-6 py-16 text-center bg-white border border-gray-100 shadow-sm rounded-2xl">
-          <h2 className="text-lg font-bold text-gray-800">Belum ada transaksi</h2>
-          <p className="mt-2 text-sm text-gray-500">Transaksi organizer akan muncul di sini setelah customer checkout event Anda.</p>
+          <h2 className="text-lg font-bold text-gray-800">
+            {hasActiveFilter ? 'Tidak ada transaksi yang cocok' : 'Belum ada transaksi'}
+          </h2>
+          <p className="mt-2 text-sm text-gray-500">
+            {hasActiveFilter
+              ? 'Coba ganti status filter atau tampilkan semua transaksi.'
+              : 'Transaksi organizer akan muncul di sini setelah customer checkout event Anda.'}
+          </p>
+          {hasActiveFilter ? (
+            <button
+              type="button"
+              onClick={() => setStatusFilter('')}
+              className="mt-4 inline-flex rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+            >
+              Reset Filter
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-2xl">
+          <div className="px-6 pt-4 text-xs text-gray-400 md:hidden">Geser tabel ke samping untuk melihat semua kolom.</div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px]">
               <thead className="border-b border-gray-100 bg-gray-50">
@@ -175,7 +193,10 @@ export default function TransactionsManagementPage() {
                             <>
                               <button
                                 type="button"
-                                onClick={() => handleReject(transaction.id)}
+                                onClick={() => {
+                                  setErrorMessage('')
+                                  setPendingRejectTransaction(transaction)
+                                }}
                                 disabled={isProcessing}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                               >
@@ -196,6 +217,25 @@ export default function TransactionsManagementPage() {
           </div>
         </div>
       )}
+
+      <ConfirmActionDialog
+        open={Boolean(pendingRejectTransaction)}
+        onOpenChange={(open) => {
+          if (!open && pageLoadingId === null) {
+            setPendingRejectTransaction(null)
+          }
+        }}
+        title="Batalkan transaksi ini?"
+        description="Action ini hanya valid sebelum Midtrans mengonfirmasi pembayaran. Seats, points, coupon, dan voucher akan direstore jika terpakai."
+        confirmLabel="Ya, Batalkan"
+        loading={pendingRejectTransaction ? pageLoadingId === pendingRejectTransaction.id : false}
+        errorMessage={pendingRejectTransaction ? errorMessage : ''}
+        onConfirm={() => {
+          if (pendingRejectTransaction) {
+            void handleReject(pendingRejectTransaction.id)
+          }
+        }}
+      />
     </div>
   )
 }

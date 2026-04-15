@@ -5,6 +5,7 @@ import {
   Tag, Loader2, Eye
 } from 'lucide-react';
 import axios from 'axios';
+import { ConfirmActionDialog } from '@/components/ui/confirm-action-dialog';
 import { useAuthStore } from '@/store/authStore';
 
 interface Event {
@@ -39,7 +40,7 @@ export default function MyEventsPage() {
 
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
@@ -68,7 +69,7 @@ export default function MyEventsPage() {
       await axios.delete(`${import.meta.env.VITE_API_URL}/events/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setDeleteId(null);
+      setEventToDelete(null);
       fetchEvents();
     } catch (err: any) {
       setDeleteError(err.response?.data?.message || 'Gagal menghapus event.');
@@ -89,7 +90,7 @@ export default function MyEventsPage() {
     <div className="min-h-screen py-8">
       <div className="max-w-5xl px-4 mx-auto sm:px-6 lg:px-8">
 
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col gap-4 mb-8 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-extrabold text-gray-900">My Events</h1>
             <p className="mt-1 text-sm text-gray-400">Kelola semua event yang kamu buat</p>
@@ -178,38 +179,39 @@ export default function MyEventsPage() {
                           className="flex items-center gap-1.5 text-xs font-semibold text-secondary-500 border border-secondary-200 px-3 py-1.5 rounded-lg hover:bg-secondary-50 transition-colors">
                           <Tag className="w-3.5 h-3.5" /> Voucher
                         </Link>
-                        <button onClick={() => { setDeleteId(event.id); setDeleteError(''); }}
+                        <button onClick={() => { setEventToDelete(event); setDeleteError(''); }}
                           className="flex items-center gap-1.5 text-xs font-semibold text-red-500 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" /> Hapus
                         </button>
                       </div>
                     </div>
                   </div>
-
-                  {deleteId === event.id && (
-                    <div className="px-5 py-4 border-t border-red-100 bg-red-50">
-                      <p className="mb-1 text-sm font-bold text-red-700">Hapus event ini?</p>
-                      <p className="mb-3 text-xs text-red-500">Event yang sudah dihapus tidak bisa dikembalikan.</p>
-                      {deleteError && <p className="mb-2 text-xs text-red-600">{deleteError}</p>}
-                      <div className="flex gap-2">
-                        <button onClick={() => setDeleteId(null)}
-                          className="flex-1 py-2 text-sm font-semibold text-gray-600 transition-colors border border-gray-200 rounded-xl hover:bg-white">
-                          Batal
-                        </button>
-                        <button onClick={() => handleDelete(event.id)} disabled={deleting}
-                          className="flex items-center justify-center flex-1 gap-2 py-2 text-sm font-bold text-white transition-colors bg-red-500 hover:bg-red-600 rounded-xl disabled:opacity-60">
-                          {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                          {deleting ? 'Menghapus...' : 'Ya, Hapus'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      <ConfirmActionDialog
+        open={Boolean(eventToDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setEventToDelete(null);
+            setDeleteError('');
+          }
+        }}
+        title="Hapus event ini?"
+        description={eventToDelete ? `Event ${eventToDelete.name} akan dihapus dan tidak bisa dikembalikan.` : 'Event yang sudah dihapus tidak bisa dikembalikan.'}
+        confirmLabel="Ya, Hapus"
+        loading={deleting}
+        errorMessage={deleteError}
+        onConfirm={() => {
+          if (eventToDelete) {
+            void handleDelete(eventToDelete.id);
+          }
+        }}
+      />
     </div>
   );
 }
