@@ -69,7 +69,7 @@ export async function register(payload: RegisterPayload) {
   const hashed = await bcrypt.hash(password, 10)
   const referral_code = await createUniqueReferralCode(prisma)
 
-  const user = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     let referrerId: number | null = null
 
     if (referralCode && role === Role.customer) {
@@ -82,22 +82,21 @@ export async function register(payload: RegisterPayload) {
       data: { name, email, password: hashed, role, referral_code },
     })
 
-    if (referrerId) {
-      await tx.referral.create({
-        data: {
-          referrer_id: referrerId,
-          referee_id: createdUser.id,
-        },
-      })
-
-      await awardReferralRewards(referrerId, createdUser.id)
-    }
-
-    return createdUser
+    return { user: createdUser, referrerId }
   })
 
-  const token = signAuthToken(user.id, user.role)
-  return { user: sanitizeUser(user), token }
+  // Award referral rewards OUTSIDE transaction
+  if (result.referrerId) {
+    try {
+      await awardReferralRewards(result.referrerId, result.user.id)
+    } catch (err) {
+      console.error('Failed to award referral rewards:', err)
+      // User still created successfully, just rewards failed
+    }
+  }
+
+  const token = signAuthToken(result.user.id, result.user.role)
+  return { user: sanitizeUser(result.user), token }
 }
 
 export async function login(email: string, password: string) {
@@ -144,4 +143,3 @@ export async function resetPassword(token: string, newPassword: string) {
   await prisma.user.update({ where: { email: payload.email }, data: { password: hashed } })
   return { message: 'Password berhasil direset' }
 }
-
