@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import {
   ArrowRight, Ticket, Users, Star, Shield,
-  Zap, Heart, Mail, Instagram, Twitter, MapPin,
-  DollarSign, Gift, Search
+  Zap, Heart, Mail, Instagram, MapPin,
+  Gift, Search
 } from 'lucide-react';
 
 const STATS = [

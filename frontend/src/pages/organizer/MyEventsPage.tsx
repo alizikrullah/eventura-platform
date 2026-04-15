@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Plus, Calendar, MapPin, Users, Pencil, Trash2,
   Tag, Loader2, Eye
@@ -36,7 +36,6 @@ function formatPrice(price: number) {
 
 export default function MyEventsPage() {
   const { token, isHydrated } = useAuthStore();
-  const navigate = useNavigate();
 
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,7 +79,7 @@ export default function MyEventsPage() {
 
   if (!isHydrated || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 text-primary-900 animate-spin" />
       </div>
     );
@@ -88,12 +87,12 @@ export default function MyEventsPage() {
 
   return (
     <div className="min-h-screen py-8">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl px-4 mx-auto sm:px-6 lg:px-8">
 
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-extrabold text-gray-900">My Events</h1>
-            <p className="text-sm text-gray-400 mt-1">Kelola semua event yang kamu buat</p>
+            <p className="mt-1 text-sm text-gray-400">Kelola semua event yang kamu buat</p>
           </div>
           <Link to="/organizer/dashboard/events/create"
             className="flex items-center gap-2 bg-primary-900 hover:bg-primary-800 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors shadow-sm">
@@ -103,11 +102,11 @@ export default function MyEventsPage() {
 
         {events.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Calendar className="w-9 h-9 text-gray-300" />
+            <div className="flex items-center justify-center w-20 h-20 mb-4 bg-gray-100 rounded-full">
+              <Calendar className="text-gray-300 w-9 h-9" />
             </div>
-            <h3 className="text-lg font-bold text-gray-700 mb-2">Belum ada event</h3>
-            <p className="text-sm text-gray-400 mb-6">Mulai buat event pertamamu sekarang!</p>
+            <h3 className="mb-2 text-lg font-bold text-gray-700">Belum ada event</h3>
+            <p className="mb-6 text-sm text-gray-400">Mulai buat event pertamamu sekarang!</p>
             <Link to="/organizer/dashboard/events/create"
               className="inline-flex items-center gap-2 bg-primary-900 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-primary-800 transition-colors text-sm">
               <Plus className="w-4 h-4" /> Buat Event
@@ -122,13 +121,13 @@ export default function MyEventsPage() {
               const isPast = new Date(event.end_date) < new Date();
 
               return (
-                <div key={event.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+                <div key={event.id} className="overflow-hidden transition-shadow bg-white border border-gray-100 rounded-2xl hover:shadow-md">
                   <div className="flex items-start gap-4 p-5">
-                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-primary-100 shrink-0">
+                    <div className="w-20 h-20 overflow-hidden rounded-xl bg-primary-100 shrink-0">
                       {event.image_url ? (
-                        <img src={event.image_url} alt={event.name} className="w-full h-full object-cover" />
+                        <img src={event.image_url} alt={event.name} className="object-cover w-full h-full" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
+                        <div className="flex items-center justify-center w-full h-full">
                           <Calendar className="w-7 h-7 text-primary-300" />
                         </div>
                       )}
@@ -137,8 +136,8 @@ export default function MyEventsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-bold text-gray-900 text-base">{event.name}</h3>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-base font-bold text-gray-900">{event.name}</h3>
                             {event.category && (
                               <span className="text-xs bg-primary-50 text-primary-900 px-2 py-0.5 rounded-full font-semibold">
                                 {event.category.name}
@@ -166,7 +165,7 @@ export default function MyEventsPage() {
                         <p className="text-base font-extrabold text-primary-900 shrink-0">{formatPrice(minPrice)}</p>
                       </div>
 
-                      <div className="flex items-center gap-2 mt-3 flex-wrap">
+                      <div className="flex flex-wrap items-center gap-2 mt-3">
                         <Link to={`/events/${event.id}`}
                           className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-colors">
                           <Eye className="w-3.5 h-3.5" /> Lihat
@@ -188,17 +187,17 @@ export default function MyEventsPage() {
                   </div>
 
                   {deleteId === event.id && (
-                    <div className="border-t border-red-100 bg-red-50 px-5 py-4">
-                      <p className="text-sm font-bold text-red-700 mb-1">Hapus event ini?</p>
-                      <p className="text-xs text-red-500 mb-3">Event yang sudah dihapus tidak bisa dikembalikan.</p>
-                      {deleteError && <p className="text-xs text-red-600 mb-2">{deleteError}</p>}
+                    <div className="px-5 py-4 border-t border-red-100 bg-red-50">
+                      <p className="mb-1 text-sm font-bold text-red-700">Hapus event ini?</p>
+                      <p className="mb-3 text-xs text-red-500">Event yang sudah dihapus tidak bisa dikembalikan.</p>
+                      {deleteError && <p className="mb-2 text-xs text-red-600">{deleteError}</p>}
                       <div className="flex gap-2">
                         <button onClick={() => setDeleteId(null)}
-                          className="flex-1 py-2 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-white transition-colors">
+                          className="flex-1 py-2 text-sm font-semibold text-gray-600 transition-colors border border-gray-200 rounded-xl hover:bg-white">
                           Batal
                         </button>
                         <button onClick={() => handleDelete(event.id)} disabled={deleting}
-                          className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                          className="flex items-center justify-center flex-1 gap-2 py-2 text-sm font-bold text-white transition-colors bg-red-500 hover:bg-red-600 rounded-xl disabled:opacity-60">
                           {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                           {deleting ? 'Menghapus...' : 'Ya, Hapus'}
                         </button>

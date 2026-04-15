@@ -10,8 +10,6 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { useAuth } from '../hooks/useAuth'
 import { userService } from '../services/userService'
-import { useAuthStore } from '@/store/authStore'
-import axios from 'axios'
 
 const profileSchema = Yup.object({
   name: Yup.string().required('Nama wajib diisi'),
@@ -35,8 +33,6 @@ export function ProfilePage() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
   const [preview, setPreview] = useState<string | undefined>(auth.user?.profile_picture ?? undefined)
   const localPreviewUrlRef = useRef<string | null>(null)
-  const { token } = useAuthStore()
-  
 
   // Points state
   const [totalPoints, setTotalPoints] = useState<number>(0)
@@ -63,16 +59,22 @@ export function ProfilePage() {
 
   // Fetch points
   useEffect(() => {
-    if (!auth.isAuthenticated || !token) return
-    axios.get(`${import.meta.env.VITE_API_URL}/transactions/discounts`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
-        const points = res.data.data?.points?.total_points
-        if (typeof points === 'number') setTotalPoints(points)
-      })
-      .catch(() => {})
-}, [auth.isAuthenticated, token])
+    if (!auth.isAuthenticated || auth.user?.role !== 'customer') {
+      setTotalPoints(0)
+      return
+    }
+
+    const loadPoints = async () => {
+      try {
+        const points = await userService.getAvailablePoints()
+        setTotalPoints(points)
+      } catch {
+        setTotalPoints(0)
+      }
+    }
+
+    void loadPoints()
+  }, [auth.isAuthenticated, auth.user?.role])
 
   useEffect(() => {
     return () => {

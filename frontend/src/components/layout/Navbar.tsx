@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, ChevronDown, LogOut, User, Ticket } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -12,6 +12,15 @@ export default function Navbar() {
 
   // Check if current route is organizer dashboard
   const isOrganizerDashboard = location.pathname.startsWith('/organizer/dashboard');
+
+  useEffect(() => {
+    setMobileOpen(false);
+    setDropdownOpen(false);
+  }, [location.pathname]);
+
+  const handleOrganizerMobileMenu = () => {
+    window.dispatchEvent(new CustomEvent('organizer-sidebar:open'));
+  };
 
   const handleLogout = () => {
     logout();
@@ -39,54 +48,58 @@ export default function Navbar() {
         : 'bg-white/90 backdrop-blur-md border-b border-gray-100'
     }`}>
       <div className={isOrganizerDashboard ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}>
-        <div className="flex items-center justify-between h-16">
+        <div className={`flex items-center justify-between ${isOrganizerDashboard ? 'h-16 px-4 sm:px-6' : 'h-16'}`}>
 
           {isOrganizerDashboard ? (
             <>
-              {/* Logo - Left */}
-              <div className="pl-6">
-                <Link to="/" className="flex items-center gap-2">
-                  <span className="text-3xl font-black tracking-tight text-white">
+              <div className="flex items-center min-w-0 gap-3">
+                <button
+                  type="button"
+                  onClick={handleOrganizerMobileMenu}
+                  className="inline-flex items-center justify-center w-10 h-10 text-white transition-colors border lg:hidden rounded-xl border-primary-700 hover:bg-primary-800 shrink-0"
+                  aria-label="Open organizer menu"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+
+                <Link to="/" className="flex items-center min-w-0 gap-2">
+                  <span className="truncate text-[2rem] leading-none font-black tracking-tight text-white sm:text-3xl">
                     Even<span className="text-secondary-400">tura</span>
                   </span>
                 </Link>
               </div>
 
-              {/* Spacer */}
-              <div className="flex-1"></div>
-
-              {/* Avatar - Right */}
-              <div className="pr-6">
+              <div className="pl-4 sm:pl-6">
                 {!isAuthenticated ? (
-                  <>
+                  <div className="flex items-center gap-2">
                     <Link
                       to="/login"
-                      className="text-sm font-medium text-white hover:bg-primary-800 transition-colors px-4 py-2 rounded-lg"
+                      className="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg hover:bg-primary-800"
                     >
                       Login
                     </Link>
                     <Link
                       to="/register"
-                      className="text-sm font-semibold bg-secondary-400 text-white hover:bg-secondary-500 px-4 py-2 rounded-lg transition-colors shadow-sm"
+                      className="px-4 py-2 text-sm font-semibold text-white transition-colors rounded-lg shadow-sm bg-secondary-400 hover:bg-secondary-500"
                     >
                       Daftar
                     </Link>
-                  </>
+                  </div>
                 ) : (
                   <div className="relative">
                     <button
                       onClick={() => setDropdownOpen(!dropdownOpen)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-primary-800 transition-colors group"
+                      className="flex max-w-[12.5rem] items-center gap-2 rounded-xl px-2.5 py-2 hover:bg-primary-800 transition-colors group sm:max-w-none sm:px-3"
                     >
-                      <div className="w-8 h-8 bg-secondary-400 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                      <div className="flex items-center justify-center text-sm font-semibold text-white rounded-full w-9 h-9 bg-secondary-400 shrink-0">
                         {user?.name?.charAt(0).toUpperCase()}
                       </div>
-                      <div className="text-left">
-                        <p className="text-sm font-semibold text-white leading-none">{user?.name}</p>
-                        <p className="text-xs text-primary-200 capitalize mt-0.5">{user?.role}</p>
+                      <div className="hidden min-w-0 text-left sm:block">
+                        <p className="text-sm font-semibold leading-none text-white truncate">{user?.name}</p>
+                        <p className="mt-0.5 text-xs text-primary-200 capitalize">{user?.role}</p>
                       </div>
                       <ChevronDown
-                        className={`w-4 h-4 text-primary-200 transition-transform duration-200 ${
+                        className={`hidden w-4 h-4 text-primary-200 transition-transform duration-200 sm:block ${
                           dropdownOpen ? 'rotate-180' : ''
                         }`}
                       />
@@ -98,7 +111,7 @@ export default function Navbar() {
                           className="fixed inset-0 z-10"
                           onClick={() => setDropdownOpen(false)}
                         />
-                        <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20 overflow-hidden">
+                        <div className="absolute right-0 z-20 py-1 mt-2 overflow-hidden bg-white border border-gray-100 shadow-lg top-full w-52 rounded-xl">
                           <div className="px-4 py-3 border-b border-gray-50">
                             <p className="text-xs text-gray-400">Login sebagai</p>
                             <p className="text-sm font-semibold text-gray-800 truncate">{user?.email}</p>
@@ -135,7 +148,7 @@ export default function Navbar() {
                             </Link>
                           )}
 
-                          <div className="border-t border-gray-50 mt-1">
+                          <div className="mt-1 border-t border-gray-50">
                             <button
                               onClick={handleLogout}
                               className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
@@ -149,14 +162,6 @@ export default function Navbar() {
                     )}
                   </div>
                 )}
-
-                {/* Mobile hamburger */}
-                <button
-                  onClick={() => setMobileOpen(!mobileOpen)}
-                  className="md:hidden p-2 rounded-lg text-white hover:bg-primary-800 transition-colors"
-                >
-                  {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                </button>
               </div>
             </>
           ) : (
@@ -170,7 +175,7 @@ export default function Navbar() {
               </Link>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="items-center hidden gap-8 md:flex">
             <Link to="/about" className={navLinkClass('/about')}>
               About
             </Link>
@@ -180,7 +185,7 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Auth */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="items-center hidden gap-3 md:flex">
             {!isAuthenticated ? (
               <>
                 <Link
@@ -238,7 +243,7 @@ export default function Navbar() {
                       className="fixed inset-0 z-10"
                       onClick={() => setDropdownOpen(false)}
                     />
-                    <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20 overflow-hidden">
+                    <div className="absolute right-0 z-20 py-1 mt-2 overflow-hidden bg-white border border-gray-100 shadow-lg top-full w-52 rounded-xl">
                       <div className="px-4 py-3 border-b border-gray-50">
                         <p className="text-xs text-gray-400">Login sebagai</p>
                         <p className="text-sm font-semibold text-gray-800 truncate">{user?.email}</p>
@@ -275,7 +280,7 @@ export default function Navbar() {
                         </Link>
                       )}
 
-                      <div className="border-t border-gray-50 mt-1">
+                      <div className="mt-1 border-t border-gray-50">
                         <button
                           onClick={handleLogout}
                           className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
@@ -294,7 +299,7 @@ export default function Navbar() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+            className="p-2 text-gray-600 transition-colors rounded-lg md:hidden hover:bg-gray-50"
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -304,7 +309,7 @@ export default function Navbar() {
       </div>
 
       {/* Mobile Menu */}
-      {mobileOpen && (
+      {!isOrganizerDashboard && mobileOpen && (
         <div className={`md:hidden border-t ${
           isOrganizerDashboard 
             ? 'bg-primary-900 border-primary-800' 

@@ -2,11 +2,16 @@ import prisma from '../config/prisma';
 import { addHours, format } from 'date-fns';
 import { createSnapTransaction } from '../config/midtrans';
 import { getAvailablePoints, usePoints } from './pointService';
+import { sendTransactionAcceptedEmail, sendTransactionRejectedEmail } from './mailService';
+import { rollbackTransaction } from './rollbackService';
 import type {
   CreateTransactionPayload,
   TransactionResponse,
   TransactionDetail,
-  AvailableDiscounts
+  AvailableDiscounts,
+  OrganizerTransactionActionResult,
+  OrganizerTransactionsResult,
+  TransactionStatus,
 } from '../types/transaction';
 
 /**
@@ -592,5 +597,238 @@ export const getTransactionDetail = async (
     payment_expired_at: transaction.payment_expired_at,
     created_at: transaction.created_at,
     updated_at: transaction.updated_at
+  };
+};
+
+export const getOrganizerTransactions = async (
+  organizerId: number,
+  filters: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  }
+): Promise<OrganizerTransactionsResult> => {
+  const { status, page = 1, limit = 10 } = filters;
+
+  const where: any = {
+    event: {
+      organizer_id: organizerId,
+    },
+  };
+
+  if (status) {
+    where.status = status;
+  }
+
+  const [transactions, total] = await Promise.all([
+    prisma.transaction.findMany({
+      where,
+      orderBy: {
+        created_at: 'desc',
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+      select: {
+        id: true,
+        invoice_number: true,
+        status: true,
+        final_price: true,
+        created_at: true,
+        paid_at: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        event: {
+          select: {
+            id: true,
+            name: true,
+            start_date: true,
+          },
+        },
+      },
+    }),
+    prisma.transaction.count({ where }),
+  ]);
+
+  const mappedTransactions = transactions.map((transaction) => ({
+    id: transaction.id,
+    invoice_number: transaction.invoice_number,
+    status: transaction.status,
+    final_price: transaction.final_price,
+    created_at: transaction.created_at,
+    paid_at: transaction.paid_at,
+    customer: transaction.user,
+    event: transaction.event,
+  }));
+
+  return {
+    transactions: mappedTransactions,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    },
+  };
+};
+
+const getTransactionNotificationContext = async (transactionId: number) => {
+  const transaction = await prisma.transaction.findUnique({
+    where: { id: transactionId },
+    select: {
+      id: true,
+      invoice_number: true,
+      status: true,
+      final_price: true,
+      paid_at: true,
+      user: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+      event: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!transaction) {
+    throw new Error('Transaction not found');
+  }
+
+  return transaction;
+};
+
+export const transitionTransactionToStatus = async (
+  transactionId: number,
+  targetStatus: Extract<TransactionStatus, 'paid' | 'expired' | 'canceled'>
+): Promise<{ transactionId: number; status: TransactionStatus; rollback?: OrganizerTransactionActionResult['rollback']; changed: boolean }> => {
+  const existing = await getTransactionNotificationContext(transactionId);
+
+  if (existing.status === targetStatus) {
+    return {
+      transactionId,
+      status: existing.status,
+      changed: false,
+    };
+  }
+
+  if (existing.status === 'paid' && targetStatus !== 'paid') {
+    throw new Error('Paid transaction cannot transition to a failed status');
+  }
+
+  const updatedAt = new Date();
+  const updated = await prisma.transaction.update({
+    where: { id: transactionId },
+    data: {
+      status: targetStatus,
+      updated_at: updatedAt,
+      ...(targetStatus === 'paid' && !existing.paid_at ? { paid_at: updatedAt } : {}),
+    },
+  });
+
+  let rollback: OrganizerTransactionActionResult['rollback'];
+
+  if (targetStatus === 'paid') {
+    await sendTransactionAcceptedEmail({
+      to: existing.user.email,
+      userName: existing.user.name,
+      eventName: existing.event.name,
+      invoiceNumber: existing.invoice_number,
+      finalPrice: existing.final_price,
+    });
+  } else {
+    rollback = await rollbackTransaction(transactionId);
+
+    await sendTransactionRejectedEmail({
+      to: existing.user.email,
+      userName: existing.user.name,
+      eventName: existing.event.name,
+      invoiceNumber: existing.invoice_number,
+      finalPrice: existing.final_price,
+      failureType: targetStatus === 'expired' ? 'expired' : 'canceled',
+    });
+  }
+
+  return {
+    transactionId: updated.id,
+    status: updated.status,
+    rollback,
+    changed: true,
+  };
+};
+
+async function getOrganizerOwnedTransaction(transactionId: number, organizerId: number) {
+  const transaction = await prisma.transaction.findUnique({
+    where: { id: transactionId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      event: {
+        select: {
+          id: true,
+          name: true,
+          organizer_id: true,
+        },
+      },
+    },
+  });
+
+  if (!transaction) {
+    throw new Error('Transaction not found');
+  }
+
+  if (transaction.event.organizer_id !== organizerId) {
+    throw new Error('Unauthorized access to this transaction');
+  }
+
+  return transaction;
+}
+
+export const approveTransactionByOrganizer = async (
+  transactionId: number,
+  organizerId: number
+): Promise<OrganizerTransactionActionResult> => {
+  await getOrganizerOwnedTransaction(transactionId, organizerId);
+
+  throw new Error('Midtrans transactions cannot be approved manually. Wait for Midtrans webhook confirmation');
+};
+
+export const rejectTransactionByOrganizer = async (
+  transactionId: number,
+  organizerId: number
+): Promise<OrganizerTransactionActionResult> => {
+  const transaction = await getOrganizerOwnedTransaction(transactionId, organizerId);
+
+  if (transaction.status === 'expired') {
+    throw new Error('Expired transaction cannot be rejected again');
+  }
+
+  if (transaction.status === 'canceled') {
+    throw new Error('Transaction has already been rejected');
+  }
+
+  if (transaction.status === 'paid') {
+    throw new Error('Paid transaction cannot be rejected');
+  }
+
+  const result = await transitionTransactionToStatus(transactionId, 'canceled');
+
+  return {
+    transactionId,
+    status: result.status,
+    rollback: result.rollback,
   };
 };

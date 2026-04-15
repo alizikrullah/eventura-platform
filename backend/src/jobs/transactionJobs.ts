@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import prisma from '../config/prisma';
-import { expireAndRollbackTransaction } from '../services/rollbackService';
+import { transitionTransactionToStatus } from '../services/transactionService';
 
 /**
  * Transaction Cron Jobs
@@ -51,7 +51,7 @@ export const checkExpiredTransactions = () => {
         // Expire and rollback each transaction
         for (const tx of expiredTransactions) {
           try {
-            await expireAndRollbackTransaction(tx.id);
+            await transitionTransactionToStatus(tx.id, 'expired');
             console.log(
               `[Cron] Expired and rolled back: ${tx.invoice_number}`
             );

@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from 'express'
+import prisma from '../config/prisma'
 
 /**
  * Validate create event payload
  */
-export const validateCreateEvent = (req: Request, res: Response, next: NextFunction) => {
+export const validateCreateEvent = async (req: Request, res: Response, next: NextFunction) => {
   const { name, location, total_seats, start_date, end_date, category_id } = req.body
 
   const errors: string[] = []
@@ -49,6 +50,19 @@ export const validateCreateEvent = (req: Request, res: Response, next: NextFunct
     }
   }
 
+  if (category_id) {
+    const parsedCategoryId = Number(category_id)
+
+    if (Number.isNaN(parsedCategoryId) || parsedCategoryId <= 0) {
+      errors.push('Category must be a valid number')
+    } else {
+      const category = await prisma.category.findUnique({ where: { id: parsedCategoryId } })
+      if (!category) {
+        errors.push('Selected category does not exist')
+      }
+    }
+  }
+
   if (errors.length > 0) {
     return res.status(422).json({
       success: false,
@@ -63,8 +77,8 @@ export const validateCreateEvent = (req: Request, res: Response, next: NextFunct
 /**
  * Validate update event payload
  */
-export const validateUpdateEvent = (req: Request, res: Response, next: NextFunction) => {
-  const { name, total_seats, start_date, end_date } = req.body
+export const validateUpdateEvent = async (req: Request, res: Response, next: NextFunction) => {
+  const { name, total_seats, start_date, end_date, category_id } = req.body
 
   const errors: string[] = []
 
@@ -91,6 +105,19 @@ export const validateUpdateEvent = (req: Request, res: Response, next: NextFunct
 
     if (startDate >= endDate) {
       errors.push('End date must be after start date')
+    }
+  }
+
+  if (category_id !== undefined && category_id !== null && category_id !== '') {
+    const parsedCategoryId = Number(category_id)
+
+    if (Number.isNaN(parsedCategoryId) || parsedCategoryId <= 0) {
+      errors.push('Category must be a valid number')
+    } else {
+      const category = await prisma.category.findUnique({ where: { id: parsedCategoryId } })
+      if (!category) {
+        errors.push('Selected category does not exist')
+      }
     }
   }
 
