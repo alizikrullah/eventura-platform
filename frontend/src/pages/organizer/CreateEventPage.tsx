@@ -171,7 +171,7 @@ export default function CreateEventPage() {
         }))
       ));
 
-      const res = await axios.post(
+      await axios.post(
         `${import.meta.env.VITE_API_URL}/events`,
         formData,
         {
@@ -182,7 +182,6 @@ export default function CreateEventPage() {
         }
       );
 
-      const newEventId = res.data.data?.event?.id || res.data.data?.id;
       navigate('/organizer/dashboard/events');
     } catch (err: any) {
       setSubmitError(err.response?.data?.message || 'Gagal membuat event. Coba lagi.');

@@ -3,6 +3,15 @@ import type { User } from '../types/user'
 import { api } from '../utils/api'
 import { getApiErrorMessage } from '../utils/apiError'
 
+interface AvailableDiscountsResponse {
+  success: boolean
+  data: {
+    points: {
+      total_points: number
+    }
+  }
+}
+
 export const userService = {
   async getMe() {
     try {
@@ -36,6 +45,14 @@ export const userService = {
       return response.data.user
     } catch (error) {
       throw new Error(getApiErrorMessage(error, 'Gagal memperbarui foto profil'))
+    }
+  },
+  async getAvailablePoints() {
+    try {
+      const response = await api.get<AvailableDiscountsResponse>('/transactions/discounts')
+      return response.data.data.points.total_points
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error, 'Gagal memuat poin pengguna'))
     }
   },
 }

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Plus, CreditCard } from 'lucide-react';
+import { Calendar, ChevronLeft, LayoutDashboard, Plus, X } from 'lucide-react';
 
 interface MenuItem {
   icon: React.ElementType;
@@ -7,14 +7,25 @@ interface MenuItem {
   path: string;
 }
 
+interface OrganizerSidebarProps {
+  isCollapsed: boolean;
+  isMobileOpen: boolean;
+  onToggleCollapse: () => void;
+  onCloseMobile: () => void;
+}
+
 const menuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/organizer/dashboard/overview' },
   { icon: Calendar, label: 'My Events', path: '/organizer/dashboard/events' },
   { icon: Plus, label: 'Create Event', path: '/organizer/dashboard/events/create' },
-  { icon: CreditCard, label: 'Transactions', path: '/organizer/dashboard/transactions' },
 ];
 
-export default function OrganizerSidebar() {
+export default function OrganizerSidebar({
+  isCollapsed,
+  isMobileOpen,
+  onToggleCollapse,
+  onCloseMobile,
+}: OrganizerSidebarProps) {
   const location = useLocation();
 
   const isActive = (path: string) => {
@@ -31,51 +42,84 @@ export default function OrganizerSidebar() {
   };
 
   return (
-    <aside className="w-64 bg-primary-900 min-h-screen fixed left-0 top-16 bottom-0 flex flex-col">
-      {/* Header */}
-      <div className="px-6 py-6 border-b border-primary-800">
-        <h2 className="text-white font-bold text-lg">Organizer Panel</h2>
-        <p className="text-primary-200 text-xs mt-1">Kelola event & transaksi</p>
-      </div>
+        <>
+          <div
+            onClick={onCloseMobile}
+            className={`fixed inset-0 z-30 bg-slate-950/45 transition-opacity lg:hidden ${
+              isMobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+            }`}
+          />
 
-      {/* Menu Items */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.path);
-          
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`
-                flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
-                ${active 
-                  ? 'bg-secondary-400 text-white shadow-lg' 
-                  : 'text-primary-100 hover:bg-primary-800 hover:text-white'
-                }
-              `}
-            >
-              <Icon className={`w-5 h-5 ${active ? 'text-white' : 'text-primary-300'}`} />
-              <span className="font-medium text-sm">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Footer Help */}
-      <div className="px-6 py-4 border-t border-primary-800">
-        <div className="bg-primary-800 rounded-lg p-4">
-          <p className="text-white text-xs font-semibold mb-1">Butuh bantuan?</p>
-          <p className="text-primary-200 text-xs mb-3">Hubungi support kami</p>
-          <a
-            href="mailto:support@eventura.com"
-            className="block text-center bg-secondary-400 hover:bg-secondary-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+          <aside
+            className={`fixed left-0 top-16 bottom-0 z-40 flex flex-col bg-primary-900 border-r border-primary-800 shadow-xl transition-all duration-300 ${
+              isCollapsed ? 'w-20' : 'w-64'
+            } ${
+              isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+            } lg:translate-x-0`}
           >
-            Contact Support
-          </a>
-        </div>
-      </div>
-    </aside>
+            <div className={`border-b border-primary-800 ${isCollapsed ? 'px-3 py-5' : 'px-6 py-6'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className={`${isCollapsed ? 'hidden' : 'block'}`}>
+                  <h2 className="text-lg font-bold text-white">Organizer Panel</h2>
+                  <p className="mt-1 text-xs text-primary-200">Kelola event & transaksi</p>
+                </div>
+
+                <div className="flex items-center gap-2 ml-auto">
+                  <button
+                    type="button"
+                    onClick={onToggleCollapse}
+                    className="items-center justify-center hidden transition-colors border rounded-lg lg:inline-flex w-9 h-9 border-primary-700 text-primary-100 hover:bg-primary-800"
+                    aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                    title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                  >
+                    <ChevronLeft className={`w-4 h-4 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCloseMobile}
+                    className="inline-flex items-center justify-center transition-colors border rounded-lg lg:hidden w-9 h-9 border-primary-700 text-primary-100 hover:bg-primary-800"
+                    aria-label="Close sidebar"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {isCollapsed ? (
+                <div className="items-center justify-center hidden pt-1 lg:flex">
+                  <span className="inline-flex items-center justify-center w-10 h-10 text-lg font-bold text-white rounded-xl bg-primary-800">
+                    O
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
+
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={onCloseMobile}
+                    title={isCollapsed ? item.label : undefined}
+                    className={`flex items-center rounded-lg transition-all duration-200 ${
+                      isCollapsed ? 'justify-center px-3 py-3.5' : 'gap-3 px-4 py-3'
+                    } ${
+                      active
+                        ? 'bg-secondary-400 text-white shadow-lg'
+                        : 'text-primary-100 hover:bg-primary-800 hover:text-white'
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 shrink-0 ${active ? 'text-white' : 'text-primary-300'}`} />
+                    {!isCollapsed ? <span className="text-sm font-medium">{item.label}</span> : null}
+                  </Link>
+                );
+              })}
+            </nav>
+          </aside>
+        </>
   );
 }

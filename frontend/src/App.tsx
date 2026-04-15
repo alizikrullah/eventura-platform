@@ -17,6 +17,7 @@ import TransactionDetailPage from '@/pages/TransactionDetailPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { CustomerDashboardPage } from '@/pages/CustomerDashboardPage';
 
@@ -48,6 +49,9 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
+
+        {/* Public reset password page - must stay accessible from email links */}
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Main pages - pakai Navbar + Footer */}
         <Route element={<Layout />}>

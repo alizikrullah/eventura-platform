@@ -1,11 +1,9 @@
 import { Request, Response } from 'express';
 import type { User } from '@prisma/client';
 import * as transactionService from '../services/transactionService';
-import * as rollbackService from '../services/rollbackService';
-// Temporary: verifySignature disabled for testing
-// import { verifySignature } from '../config/midtrans';
+import { verifySignature } from '../config/midtrans';
 import prisma from '../config/prisma';
-import type { MidtransNotification } from '../types/transaction';
+import type { MidtransNotification, TransactionStatus } from '../types/transaction';
 
 /**
  * Transaction Controller
@@ -117,6 +115,32 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
       success: false,
       message: 'Failed to retrieve transactions',
       error: error.message
+    });
+  }
+};
+
+export const getOrganizerTransactions = async (req: AuthRequest, res: Response) => {
+  try {
+    const organizerId = req.user!.id;
+    const { status, page, limit } = req.query;
+
+    const result = await transactionService.getOrganizerTransactions(organizerId, {
+      status: status as string | undefined,
+      page: page ? parseInt(page as string, 10) : 1,
+      limit: limit ? parseInt(limit as string, 10) : 10,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Get organizer transactions error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve organizer transactions',
+      error: error.message,
     });
   }
 };
@@ -237,12 +261,7 @@ export const cancelTransaction = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    await prisma.transaction.update({
-      where: { id: transactionId },
-      data: { status: 'canceled', updated_at: new Date() }
-    });
-
-    await rollbackService.rollbackTransaction(transactionId);
+    await transactionService.transitionTransactionToStatus(transactionId, 'canceled');
 
     return res.status(200).json({
       success: true,
@@ -254,6 +273,86 @@ export const cancelTransaction = async (req: AuthRequest, res: Response) => {
       success: false,
       message: 'Failed to cancel transaction',
       error: error.message
+    });
+  }
+};
+
+export const approveTransactionByOrganizer = async (req: AuthRequest, res: Response) => {
+  try {
+    const transactionId = parseInt(req.params.id as string, 10);
+    const organizerId = req.user!.id;
+
+    const result = await transactionService.approveTransactionByOrganizer(transactionId, organizerId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Transaction approved successfully',
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Approve organizer transaction error:', error);
+
+    if (
+      error.message === 'Transaction not found' ||
+      error.message === 'Unauthorized access to this transaction'
+    ) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    if (error.message.includes('cannot') || error.message.includes('already') || error.message.includes('Wait for Midtrans')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to approve transaction',
+      error: error.message,
+    });
+  }
+};
+
+export const rejectTransactionByOrganizer = async (req: AuthRequest, res: Response) => {
+  try {
+    const transactionId = parseInt(req.params.id as string, 10);
+    const organizerId = req.user!.id;
+
+    const result = await transactionService.rejectTransactionByOrganizer(transactionId, organizerId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Transaction canceled successfully before Midtrans confirmation',
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Reject organizer transaction error:', error);
+
+    if (
+      error.message === 'Transaction not found' ||
+      error.message === 'Unauthorized access to this transaction'
+    ) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    if (error.message.includes('cannot') || error.message.includes('already')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to reject transaction',
+      error: error.message,
     });
   }
 };
@@ -286,25 +385,26 @@ export const handleWebhook = async (req: Request, res: Response) => {
     // ========================================
     // 1. VERIFY SIGNATURE (Security)
     // ========================================
-    // TEMPORARY: Disabled for local testing
-    // TODO: Re-enable before production
-    /*
-    const isValid = verifySignature(
-      notification.order_id,
-      notification.status_code,
-      notification.gross_amount,
-      notification.signature_key
-    );
+    const shouldSkipSignatureValidation = process.env.MIDTRANS_DISABLE_SIGNATURE_VALIDATION === 'true';
 
-    if (!isValid) {
-      console.error('Invalid Midtrans signature!');
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid signature'
-      });
+    if (!shouldSkipSignatureValidation) {
+      const isValid = verifySignature(
+        notification.order_id,
+        notification.status_code,
+        notification.gross_amount,
+        notification.signature_key
+      );
+
+      if (!isValid) {
+        console.error('Invalid Midtrans signature!');
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid signature'
+        });
+      }
+    } else {
+      console.log('⚠️ Midtrans signature verification skipped via MIDTRANS_DISABLE_SIGNATURE_VALIDATION=true');
     }
-    */
-    console.log('⚠️ Signature verification DISABLED for testing');
 
     // ========================================
     // 2. FIND TRANSACTION
@@ -326,43 +426,28 @@ export const handleWebhook = async (req: Request, res: Response) => {
     // ========================================
     const { transaction_status, fraud_status } = notification;
 
-    let newStatus = transaction.status;
-    let shouldRollback = false;
+    let targetStatus: Extract<TransactionStatus, 'paid' | 'expired' | 'canceled'> | null = null;
 
     if (transaction_status === 'settlement') {
-      if (fraud_status === 'accept') {
-        newStatus = 'paid';
-      }
+      targetStatus = 'paid';
+    } else if (transaction_status === 'capture' && fraud_status === 'accept') {
+      targetStatus = 'paid';
     } else if (transaction_status === 'expire') {
-      newStatus = 'expired';
-      shouldRollback = true;
+      targetStatus = 'expired';
     } else if (
       transaction_status === 'cancel' ||
-      transaction_status === 'deny'
+      transaction_status === 'deny' ||
+      transaction_status === 'failure'
     ) {
-      newStatus = 'canceled';
-      shouldRollback = true;
+      targetStatus = 'canceled';
     }
 
-    if (newStatus !== transaction.status) {
-      await prisma.transaction.update({
-        where: { id: transaction.id },
-        data: {
-          status: newStatus,
-          updated_at: new Date()
-        }
-      });
+    if (targetStatus && targetStatus !== transaction.status) {
+      await transactionService.transitionTransactionToStatus(transaction.id, targetStatus);
 
       console.log(
-        `Transaction ${transaction.invoice_number} status updated: ${transaction.status} -> ${newStatus}`
+        `Transaction ${transaction.invoice_number} status updated: ${transaction.status} -> ${targetStatus}`
       );
-
-      if (shouldRollback) {
-        await rollbackService.rollbackTransaction(transaction.id);
-        console.log(
-          `Rollback completed for transaction ${transaction.invoice_number}`
-        );
-      }
     }
 
     return res.status(200).json({

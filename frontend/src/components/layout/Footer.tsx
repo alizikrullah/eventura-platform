@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Calendar, Instagram, Twitter, Mail } from 'lucide-react';
+import { Instagram, Twitter, Mail } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
 export default function Footer() {
@@ -7,9 +7,9 @@ export default function Footer() {
   const { user, isAuthenticated } = useAuthStore();
 
   return (
-    <footer className="bg-primary-950 text-white mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+    <footer className="mt-auto text-white bg-primary-950">
+      <div className="px-4 py-12 mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
 
           {/* Brand */}
           <div className="space-y-4">
@@ -18,25 +18,25 @@ export default function Footer() {
                 Even<span className="text-secondary-400">tura</span>
               </span>
             </Link>
-            <p className="text-sm text-gray-400 leading-relaxed max-w-xs">
+            <p className="max-w-xs text-sm leading-relaxed text-gray-400">
               Platform marketplace tiket event terpercaya. Temukan dan hadiri event terbaik di kotamu.
             </p>
             <div className="flex items-center gap-3 pt-1">
               <a
                 href="#"
-                className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-secondary-400 transition-colors"
+                className="flex items-center justify-center w-8 h-8 transition-colors rounded-lg bg-white/10 hover:bg-secondary-400"
               >
                 <Instagram className="w-4 h-4" />
               </a>
               <a
                 href="#"
-                className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-secondary-400 transition-colors"
+                className="flex items-center justify-center w-8 h-8 transition-colors rounded-lg bg-white/10 hover:bg-secondary-400"
               >
                 <Twitter className="w-4 h-4" />
               </a>
               <a
                 href="mailto:hello@eventura.com"
-                className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-secondary-400 transition-colors"
+                className="flex items-center justify-center w-8 h-8 transition-colors rounded-lg bg-white/10 hover:bg-secondary-400"
               >
                 <Mail className="w-4 h-4" />
               </a>
@@ -45,14 +45,14 @@ export default function Footer() {
 
           {/* Navigation */}
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold tracking-wider text-gray-300 uppercase">
               Jelajahi
             </h4>
             <ul className="space-y-2.5">
               <li>
                 <Link
                   to="/about"
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                  className="text-sm text-gray-400 transition-colors hover:text-white"
                 >
                   About
                 </Link>
@@ -60,7 +60,7 @@ export default function Footer() {
               <li>
                 <Link
                   to="/events"
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                  className="text-sm text-gray-400 transition-colors hover:text-white"
                 >
                   Events
                 </Link>
@@ -70,7 +70,7 @@ export default function Footer() {
 
           {/* Account */}
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold tracking-wider text-gray-300 uppercase">
               Akun
             </h4>
             <ul className="space-y-2.5">
@@ -80,7 +80,7 @@ export default function Footer() {
                   <li>
                     <Link
                       to="/register"
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                      className="text-sm text-gray-400 transition-colors hover:text-white"
                     >
                       Register
                     </Link>
@@ -88,7 +88,7 @@ export default function Footer() {
                   <li>
                     <Link
                       to="/login"
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                      className="text-sm text-gray-400 transition-colors hover:text-white"
                     >
                       Login
                     </Link>
@@ -96,7 +96,7 @@ export default function Footer() {
                   <li>
                     <Link
                       to="/profile"
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                      className="text-sm text-gray-400 transition-colors hover:text-white"
                     >
                       Profile
                     </Link>
@@ -104,7 +104,7 @@ export default function Footer() {
                   <li>
                     <Link
                       to="/transactions"
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                      className="text-sm text-gray-400 transition-colors hover:text-white"
                     >
                       My Ticket
                     </Link>
@@ -116,7 +116,7 @@ export default function Footer() {
                   <li>
                     <Link
                       to="/profile"
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                      className="text-sm text-gray-400 transition-colors hover:text-white"
                     >
                       Profile
                     </Link>
@@ -124,7 +124,7 @@ export default function Footer() {
                   <li>
                     <Link
                       to="/transactions"
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                      className="text-sm text-gray-400 transition-colors hover:text-white"
                     >
                       My Ticket
                     </Link>
@@ -136,7 +136,7 @@ export default function Footer() {
                   <li>
                     <Link
                       to="/profile"
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                      className="text-sm text-gray-400 transition-colors hover:text-white"
                     >
                       Profile
                     </Link>
@@ -144,7 +144,7 @@ export default function Footer() {
                   <li>
                     <Link
                       to="/organizer/dashboard/overview"
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                      className="text-sm text-gray-400 transition-colors hover:text-white"
                     >
                       Dashboard
                     </Link>
@@ -156,7 +156,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-white/10 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex flex-col items-center justify-between gap-3 pt-6 mt-10 border-t border-white/10 sm:flex-row">
           <p className="text-xs text-gray-500">
             &copy; {currentYear} Eventura. All rights reserved.
           </p>

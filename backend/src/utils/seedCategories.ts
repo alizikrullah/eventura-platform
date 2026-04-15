@@ -1,6 +1,6 @@
 import prisma from '../config/prisma'
 
-const categories = [
+export const categories = [
   { name: 'Music', slug: 'music' },
   { name: 'Sports', slug: 'sports' },
   { name: 'Technology', slug: 'technology' },
@@ -11,7 +11,7 @@ const categories = [
   { name: 'Health & Wellness', slug: 'health-wellness' },
 ]
 
-async function seedCategories() {
+export async function seedCategories() {
   console.log('🌱 Seeding categories...')
 
   for (const category of categories) {
@@ -25,11 +25,13 @@ async function seedCategories() {
   console.log('✅ Categories seeded successfully!')
 }
 
-seedCategories()
-  .catch((error) => {
-    console.error('❌ Seed error:', error)
-    process.exit(1)
-  })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+if (require.main === module) {
+  seedCategories()
+    .catch((error) => {
+      console.error('❌ Seed error:', error)
+      process.exit(1)
+    })
+    .finally(async () => {
+      await prisma.$disconnect()
+    })
+}

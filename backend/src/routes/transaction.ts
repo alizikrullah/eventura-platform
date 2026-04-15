@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as transactionController from '../controllers/transactionController';
 import { auth } from '../middlewares/auth';
+import { roleCheck } from '../middlewares/role';
 import { createTransactionValidator } from '../validators/transactionValidator';
 
 /**
@@ -39,6 +40,7 @@ router.post(
  * - limit (optional, default: 10)
  */
 router.get('/', auth, transactionController.getTransactions);
+router.get('/organizer/manage', auth, roleCheck(['organizer']), transactionController.getOrganizerTransactions);
 
 /**
  * GET /api/transactions/discounts
@@ -49,6 +51,7 @@ router.get('/', auth, transactionController.getTransactions);
  * Otherwise Express will treat "discounts" as an ID parameter
  */
 router.get('/discounts', auth, transactionController.getAvailableDiscounts);
+router.patch('/:id/reject', auth, roleCheck(['organizer']), transactionController.rejectTransactionByOrganizer);
 
 /**
  * GET /api/transactions/:id

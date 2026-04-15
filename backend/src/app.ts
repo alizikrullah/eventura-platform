@@ -9,6 +9,7 @@ import eventRouter from './routes/event'
 import voucherRouter from './routes/voucher'
 import transactionRouter from './routes/transaction';
 import reviewRouter from './routes/review';
+import organizerDashboardRouter from './routes/organizerDashboard'
 dotenv.config();
 
 const app: Application = express();
@@ -41,6 +42,7 @@ app.use('/api/categories', categoryRouter)
 app.use('/api/events', eventRouter)
 app.use('/api/vouchers', voucherRouter)
 app.use('/api/transactions', transactionRouter);
+app.use('/api/organizer/dashboard', organizerDashboardRouter)
 app.use('/api', reviewRouter);
 
 // 404 handler

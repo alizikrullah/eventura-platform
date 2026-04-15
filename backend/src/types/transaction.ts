@@ -162,3 +162,38 @@ export interface RollbackResult {
   coupon_restored: boolean;
   voucher_usage_decremented: boolean;
 }
+
+export interface OrganizerTransactionListItem {
+  id: number;
+  invoice_number: string;
+  status: TransactionStatus;
+  final_price: number;
+  created_at: Date;
+  paid_at: Date | null;
+  customer: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  event: {
+    id: number;
+    name: string;
+    start_date: Date;
+  };
+}
+
+export interface OrganizerTransactionsResult {
+  transactions: OrganizerTransactionListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface OrganizerTransactionActionResult {
+  transactionId: number;
+  status: TransactionStatus;
+  rollback?: RollbackResult;
+}

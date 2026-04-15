@@ -215,6 +215,7 @@ model Transaction {
   points_used        Int               @default(0)
   final_price        Int
   status             TransactionStatus @default(waiting_payment)
+  paid_at            DateTime?         // timestamp when payment is first confirmed
   payment_expired_at DateTime?         // 2 hours from created_at
   created_at         DateTime          @default(now())
   updated_at         DateTime          @updatedAt
@@ -231,6 +232,7 @@ model Transaction {
   @@index([event_id])
   @@index([invoice_number])
   @@index([status])
+  @@index([status, paid_at])
   @@index([status, payment_expired_at])
   @@map("transactions")
 }
