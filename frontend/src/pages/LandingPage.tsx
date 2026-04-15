@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ArrowRight, Calendar, MapPin, Users, Star, Zap, Music, Trophy, Cpu, UtensilsCrossed, Palette, GraduationCap, Heart, Camera } from 'lucide-react';
 import axios from 'axios';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface Event {
   id: number;
@@ -47,7 +48,8 @@ export default function LandingPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
-  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearchInteraction, setHasSearchInteraction] = useState(false);
+  const debouncedSearch = useDebounce(search.trim(), 400);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -68,17 +70,17 @@ export default function LandingPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (!hasSearchInteraction || !debouncedSearch) return;
+
+    navigate(`/events?search=${encodeURIComponent(debouncedSearch)}`);
+  }, [debouncedSearch, hasSearchInteraction, navigate]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Debounce mechanism - prevent spam clicking
-    if (isSearching) return;
-    
-    setIsSearching(true);
-    setTimeout(() => setIsSearching(false), 500); // 500ms debounce
-    
-    if (search.trim()) navigate(`/events?search=${encodeURIComponent(search.trim())}`);
-    else navigate('/events');
+
+    const trimmedSearch = search.trim();
+    navigate(trimmedSearch ? `/events?search=${encodeURIComponent(trimmedSearch)}` : '/events');
   };
 
   return (
@@ -119,19 +121,22 @@ export default function LandingPage() {
               <input
                 type="text"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={e => {
+                  setSearch(e.target.value);
+                  setHasSearchInteraction(true);
+                }}
                 placeholder="Cari event, konser, workshop..."
                 className="flex-1 px-3 py-4 text-sm text-gray-800 placeholder-gray-400 outline-none bg-transparent"
               />
               <button
                 type="submit"
-                disabled={isSearching}
-                className="bg-primary-900 hover:bg-primary-800 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-primary-900 hover:bg-primary-800 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shrink-0"
               >
-                {isSearching ? 'Mencari...' : 'Cari'}
+                Cari
               </button>
             </div>
           </form>
+          <p className="mt-3 text-xs text-gray-400">Pencarian akan berjalan otomatis setelah kamu berhenti mengetik.</p>
 
           {/* stats */}
           <div className="flex items-center justify-center gap-8 mt-12 flex-wrap">

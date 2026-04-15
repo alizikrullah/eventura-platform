@@ -6,6 +6,8 @@ interface AttendeeTableProps {
   page: number
   totalPages: number
   total: number
+  hasFilters?: boolean
+  onClearFilters?: () => void
   onPreviousPage: () => void
   onNextPage: () => void
 }
@@ -37,12 +39,14 @@ export default function AttendeeTable({
   page,
   totalPages,
   total,
+  hasFilters = false,
+  onClearFilters,
   onPreviousPage,
   onNextPage,
 }: AttendeeTableProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between gap-4">
+      <div className="px-6 py-5 border-b border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-bold text-gray-900">Attendees</h3>
           <p className="text-sm text-gray-500 mt-1">Daftar pembeli tiket dari transaksi yang sudah dibayar</p>
@@ -55,11 +59,27 @@ export default function AttendeeTable({
           <div className="w-14 h-14 mx-auto rounded-full bg-gray-100 flex items-center justify-center mb-4">
             <Users className="w-7 h-7 text-gray-300" />
           </div>
-          <h4 className="text-base font-semibold text-gray-800">Belum ada attendee</h4>
-          <p className="text-sm text-gray-400 mt-1">Data attendee akan muncul setelah transaksi event organizer dibayar.</p>
+          <h4 className="text-base font-semibold text-gray-800">
+            {hasFilters ? 'Tidak ada attendee yang cocok' : 'Belum ada attendee'}
+          </h4>
+          <p className="text-sm text-gray-400 mt-1">
+            {hasFilters
+              ? 'Coba ubah event atau kata kunci pencarian yang sedang aktif.'
+              : 'Data attendee akan muncul setelah transaksi event organizer dibayar.'}
+          </p>
+          {hasFilters && onClearFilters ? (
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="mt-4 inline-flex rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+            >
+              Reset Filter
+            </button>
+          ) : null}
         </div>
       ) : (
         <>
+          <div className="px-6 pt-4 text-xs text-gray-400 sm:hidden">Geser tabel ke samping untuk melihat semua kolom.</div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px]">
               <thead className="bg-gray-50 border-b border-gray-100">
@@ -95,7 +115,7 @@ export default function AttendeeTable({
             </table>
           </div>
 
-          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-4">
+          <div className="px-6 py-4 border-t border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-gray-400">Halaman {page} dari {totalPages}</p>
             <div className="flex items-center gap-2">
               <button

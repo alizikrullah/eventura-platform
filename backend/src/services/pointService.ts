@@ -1,12 +1,17 @@
 import prisma from '../config/prisma';
-import { PointSource } from '@prisma/client';
+import { PointSource, Prisma } from '@prisma/client';
+
+type PointClient = Pick<Prisma.TransactionClient, 'point'>;
 
 /**
  * Get total available points balance for a user
  * Only counts non-expired points with remaining balance
  */
-export const getAvailablePoints = async (userId: number): Promise<number> => {
-  const points = await prisma.point.findMany({
+export const getAvailablePoints = async (
+  userId: number,
+  dbClient: PointClient = prisma
+): Promise<number> => {
+  const points = await dbClient.point.findMany({
     where: {
       user_id: userId,
       amount_remaining: { gt: 0 },
@@ -29,20 +34,21 @@ export const getAvailablePoints = async (userId: number): Promise<number> => {
  */
 export const usePoints = async (
   userId: number,
-  amountToUse: number
+  amountToUse: number,
+  dbClient: PointClient = prisma
 ): Promise<void> => {
   if (amountToUse <= 0) {
     throw new Error('Amount to use must be greater than 0');
   }
 
   // Check available balance first
-  const availableBalance = await getAvailablePoints(userId);
+  const availableBalance = await getAvailablePoints(userId, dbClient);
   if (amountToUse > availableBalance) {
     throw new Error(`Insufficient points. Available: ${availableBalance}, Requested: ${amountToUse}`);
   }
 
   // Get point records ordered by created_at (FIFO)
-  const pointRecords = await prisma.point.findMany({
+  const pointRecords = await dbClient.point.findMany({
     where: {
       user_id: userId,
       amount_remaining: { gt: 0 },
@@ -61,7 +67,7 @@ export const usePoints = async (
 
     const deductAmount = Math.min(record.amount_remaining, remainingToUse);
 
-    await prisma.point.update({
+    await dbClient.point.update({
       where: { id: record.id },
       data: {
         amount_remaining: record.amount_remaining - deductAmount,
@@ -83,8 +89,9 @@ export const usePoints = async (
 export const restorePoints = async (
   userId: number,
   amount: number,
-  source: PointSource = 'referral_reward', // Default source, can be customized
-  referenceId?: number
+  source: PointSource = 'transaction_refund',
+  referenceId?: number,
+  dbClient: PointClient = prisma
 ): Promise<void> => {
   if (amount <= 0) {
     throw new Error('Amount to restore must be greater than 0');
@@ -93,7 +100,7 @@ export const restorePoints = async (
   const expiredAt = new Date();
   expiredAt.setMonth(expiredAt.getMonth() + 3); // 3 months from now
 
-  await prisma.point.create({
+  await dbClient.point.create({
     data: {
       user_id: userId,
       amount: amount,

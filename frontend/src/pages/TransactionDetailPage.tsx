@@ -5,6 +5,7 @@ import {
   Clock, XCircle, Star, AlertCircle, Loader2
 } from 'lucide-react';
 import axios from 'axios';
+import { ConfirmActionDialog } from '@/components/ui/confirm-action-dialog';
 import { useAuthStore } from '@/store/authStore';
 
 interface TransactionItem {
@@ -379,38 +380,12 @@ export default function TransactionDetailPage() {
           {/* Cancel Button */}
           {isWaiting && (
             <div>
-              {!showCancelConfirm ? (
-                <button
-                  onClick={() => setShowCancelConfirm(true)}
-                  className="w-full py-3 border-2 border-red-200 text-red-500 hover:bg-red-50 font-semibold text-sm rounded-xl transition-colors"
-                >
-                  Batalkan Transaksi
-                </button>
-              ) : (
-                <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
-                  <p className="font-bold text-red-700 mb-1">Batalkan transaksi ini?</p>
-                  <p className="text-sm text-red-500 mb-4">
-                    Kursi, poin, dan voucher yang digunakan akan dikembalikan.
-                  </p>
-                  {cancelError && <p className="text-xs text-red-600 mb-3">{cancelError}</p>}
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setShowCancelConfirm(false)}
-                      className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors"
-                    >
-                      Tidak
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      disabled={canceling}
-                      className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-                    >
-                      {canceling ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                      {canceling ? 'Membatalkan...' : 'Ya, Batalkan'}
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                className="w-full py-3 border-2 border-red-200 text-red-500 hover:bg-red-50 font-semibold text-sm rounded-xl transition-colors"
+              >
+                Batalkan Transaksi
+              </button>
             </div>
           )}
 
@@ -443,6 +418,24 @@ export default function TransactionDetailPage() {
 
         </div>
       </div>
+
+      <ConfirmActionDialog
+        open={showCancelConfirm}
+        onOpenChange={(open) => {
+          if (!canceling) {
+            setShowCancelConfirm(open);
+            if (!open) setCancelError('');
+          }
+        }}
+        title="Batalkan transaksi ini?"
+        description="Kursi, poin, kupon, dan voucher yang digunakan akan dikembalikan bila transaksi berhasil dibatalkan."
+        confirmLabel="Ya, Batalkan"
+        loading={canceling}
+        errorMessage={cancelError}
+        onConfirm={() => {
+          void handleCancel();
+        }}
+      />
     </div>
   );
 }

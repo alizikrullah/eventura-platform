@@ -3,7 +3,7 @@ import { addHours, format } from 'date-fns';
 import { createSnapTransaction } from '../config/midtrans';
 import { getAvailablePoints, usePoints } from './pointService';
 import { sendTransactionAcceptedEmail, sendTransactionRejectedEmail } from './mailService';
-import { rollbackTransaction } from './rollbackService';
+import { applyRollbackOperations, getRollbackTransactionSnapshot } from './rollbackService';
 import type {
   CreateTransactionPayload,
   TransactionResponse,
@@ -343,7 +343,7 @@ export const createTransaction = async (
 
     // 8.3. Deduct points (if any)
     if (points_to_use > 0) {
-      await usePoints(userId, points_to_use);
+      await usePoints(userId, points_to_use, tx);
     }
 
     // 8.4. Mark coupon as used (if any)
@@ -382,6 +382,7 @@ export const createTransaction = async (
         coupon_discount: couponDiscount,
         points_used: points_to_use,
         final_price: finalPrice,
+        midtrans_order_id: invoiceNumber,
         status: 'waiting_payment',
         payment_expired_at: paymentExpiredAt
       }
@@ -457,7 +458,14 @@ export const createTransaction = async (
     itemDetails
   };
 
-  const midtransResult = await createSnapTransaction(snapParameter);
+  let midtransResult: Awaited<ReturnType<typeof createSnapTransaction>>;
+
+  try {
+    midtransResult = await createSnapTransaction(snapParameter);
+  } catch (error: any) {
+    await transitionTransactionToStatus(result.id, 'canceled', { sendEmail: false });
+    throw new Error(`Failed to initialize payment gateway: ${error.message}`);
+  }
 
   // 10. UPDATE TRANSACTION WITH SNAP TOKEN
   const updatedTransaction = await prisma.transaction.update({
@@ -708,7 +716,8 @@ const getTransactionNotificationContext = async (transactionId: number) => {
 
 export const transitionTransactionToStatus = async (
   transactionId: number,
-  targetStatus: Extract<TransactionStatus, 'paid' | 'expired' | 'canceled'>
+  targetStatus: Extract<TransactionStatus, 'paid' | 'expired' | 'canceled'>,
+  options: { sendEmail?: boolean } = {}
 ): Promise<{ transactionId: number; status: TransactionStatus; rollback?: OrganizerTransactionActionResult['rollback']; changed: boolean }> => {
   const existing = await getTransactionNotificationContext(transactionId);
 
@@ -720,41 +729,77 @@ export const transitionTransactionToStatus = async (
     };
   }
 
-  if (existing.status === 'paid' && targetStatus !== 'paid') {
-    throw new Error('Paid transaction cannot transition to a failed status');
+  if (existing.status !== 'waiting_payment') {
+    return {
+      transactionId,
+      status: existing.status,
+      changed: false,
+    };
   }
 
   const updatedAt = new Date();
-  const updated = await prisma.transaction.update({
-    where: { id: transactionId },
-    data: {
-      status: targetStatus,
-      updated_at: updatedAt,
-      ...(targetStatus === 'paid' && !existing.paid_at ? { paid_at: updatedAt } : {}),
-    },
-  });
-
+  let updated;
   let rollback: OrganizerTransactionActionResult['rollback'];
 
   if (targetStatus === 'paid') {
-    await sendTransactionAcceptedEmail({
-      to: existing.user.email,
-      userName: existing.user.name,
-      eventName: existing.event.name,
-      invoiceNumber: existing.invoice_number,
-      finalPrice: existing.final_price,
+    updated = await prisma.transaction.update({
+      where: { id: transactionId },
+      data: {
+        status: targetStatus,
+        updated_at: updatedAt,
+        payment_expired_at: null,
+        ...(existing.paid_at ? {} : { paid_at: updatedAt }),
+      },
     });
   } else {
-    rollback = await rollbackTransaction(transactionId);
+    const result = await prisma.$transaction(async (tx) => {
+      const snapshot = await getRollbackTransactionSnapshot(tx, transactionId);
 
-    await sendTransactionRejectedEmail({
-      to: existing.user.email,
-      userName: existing.user.name,
-      eventName: existing.event.name,
-      invoiceNumber: existing.invoice_number,
-      finalPrice: existing.final_price,
-      failureType: targetStatus === 'expired' ? 'expired' : 'canceled',
+      if (!snapshot) {
+        throw new Error('Transaction not found');
+      }
+
+      const updatedTransaction = await tx.transaction.update({
+        where: { id: transactionId },
+        data: {
+          status: targetStatus,
+          updated_at: updatedAt,
+          payment_expired_at: null,
+          snap_token: null,
+        },
+      });
+
+      const rollbackResult = await applyRollbackOperations(tx, snapshot);
+
+      return {
+        updatedTransaction,
+        rollbackResult,
+      };
     });
+
+    updated = result.updatedTransaction;
+    rollback = result.rollbackResult;
+  }
+
+  if (options.sendEmail !== false) {
+    if (targetStatus === 'paid') {
+      await sendTransactionAcceptedEmail({
+        to: existing.user.email,
+        userName: existing.user.name,
+        eventName: existing.event.name,
+        invoiceNumber: existing.invoice_number,
+        finalPrice: existing.final_price,
+      });
+    } else {
+      await sendTransactionRejectedEmail({
+        to: existing.user.email,
+        userName: existing.user.name,
+        eventName: existing.event.name,
+        invoiceNumber: existing.invoice_number,
+        finalPrice: existing.final_price,
+        failureType: targetStatus === 'expired' ? 'expired' : 'canceled',
+      });
+    }
   }
 
   return {

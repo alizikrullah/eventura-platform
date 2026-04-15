@@ -5,6 +5,7 @@ import {
   Star, ChevronLeft, ChevronRight, Filter
 } from 'lucide-react';
 import axios from 'axios';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface Event {
   id: number;
@@ -48,15 +49,6 @@ function formatDate(dateStr: string) {
   }).format(d);
 }
 
-function useDebounce<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
-}
-
 const SORT_OPTIONS = [
   { value: 'newest',     label: 'Terbaru' },
   { value: 'oldest',     label: 'Terlama' },
@@ -90,7 +82,7 @@ function FilterPanel({
     <div className="space-y-6">
       {/* Kategori */}
       <div>
-        <h3 className="text-sm font-bold text-gray-800 mb-3">Kategori</h3>
+        <h3 className="mb-3 text-sm font-bold text-gray-800">Kategori</h3>
         <div className="space-y-1">
           <button
             onClick={() => { setCategoryId(''); setPage(1); }}
@@ -118,36 +110,36 @@ function FilterPanel({
 
       {/* Lokasi */}
       <div>
-        <h3 className="text-sm font-bold text-gray-800 mb-3">Lokasi</h3>
+        <h3 className="mb-3 text-sm font-bold text-gray-800">Lokasi</h3>
         <input
           type="text"
           value={location}
           onChange={e => { setLocation(e.target.value); setPage(1); }}
           placeholder="Kota atau tempat..."
-          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary-900 focus:border-transparent"
+          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-900 focus:border-transparent"
         />
       </div>
 
       {/* Tanggal */}
       <div>
-        <h3 className="text-sm font-bold text-gray-800 mb-3">Tanggal Event</h3>
+        <h3 className="mb-3 text-sm font-bold text-gray-800">Tanggal Event</h3>
         <div className="space-y-2">
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">Dari tanggal</label>
+            <label className="block mb-1 text-xs text-gray-400">Dari tanggal</label>
             <input
               type="date"
               value={startDate}
               onChange={e => { setStartDate(e.target.value); setPage(1); }}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary-900 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-900 focus:border-transparent"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">Sampai tanggal</label>
+            <label className="block mb-1 text-xs text-gray-400">Sampai tanggal</label>
             <input
               type="date"
               value={endDate}
               onChange={e => { setEndDate(e.target.value); setPage(1); }}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary-900 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-900 focus:border-transparent"
             />
           </div>
         </div>
@@ -156,7 +148,7 @@ function FilterPanel({
       {hasActiveFilter && (
         <button
           onClick={resetFilters}
-          className="w-full text-sm text-red-500 border border-red-200 hover:bg-red-50 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+          className="flex items-center justify-center w-full gap-2 py-2 text-sm text-red-500 transition-colors border border-red-200 rounded-lg hover:bg-red-50"
         >
           <X className="w-4 h-4" /> Reset Filter
         </button>
@@ -231,12 +223,12 @@ export default function EventsPage() {
   return (
     <div className="min-h-screen">
       {/* HEADER */}
-      <div className="bg-white border-b border-gray-100 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Browse Events</h1>
+      <div className="py-8 bg-white border-b border-gray-100">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <h1 className="mb-4 text-2xl font-bold text-gray-900">Browse Events</h1>
           <div className="flex items-center gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="relative flex-1">
+              <Search className="absolute w-4 h-4 text-gray-400 -translate-y-1/2 left-3 top-1/2" />
               <input
                 type="text"
                 value={search}
@@ -245,7 +237,7 @@ export default function EventsPage() {
                 className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-900 focus:border-transparent bg-white"
               />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2">
+                <button onClick={() => setSearch('')} className="absolute -translate-y-1/2 right-3 top-1/2">
                   <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
                 </button>
               )}
@@ -271,7 +263,7 @@ export default function EventsPage() {
 
           {/* Active filter chips */}
           {hasActiveFilter && (
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2 mt-3">
               <span className="text-xs text-gray-400">Filter aktif:</span>
               {search && (
                 <span className="inline-flex items-center gap-1 bg-primary-50 text-primary-900 text-xs font-medium px-2.5 py-1 rounded-full">
@@ -302,12 +294,12 @@ export default function EventsPage() {
       </div>
 
       {/* BODY */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div className="flex gap-8">
 
           {/* SIDEBAR desktop */}
-          <aside className="hidden lg:block w-56 shrink-0">
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 sticky top-24">
+          <aside className="hidden w-56 lg:block shrink-0">
+            <div className="sticky p-5 bg-white border border-gray-100 rounded-2xl top-24">
               <div className="flex items-center gap-2 mb-5">
                 <SlidersHorizontal className="w-4 h-4 text-gray-500" />
                 <span className="text-sm font-bold text-gray-800">Filter</span>
@@ -349,42 +341,42 @@ export default function EventsPage() {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {Array.from({ length: 9 }).map((_, i) => (
-                  <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100">
-                    <div className="h-44 bg-gray-100 animate-pulse" />
+                  <div key={i} className="overflow-hidden bg-white border border-gray-100 rounded-2xl">
+                    <div className="bg-gray-100 h-44 animate-pulse" />
                     <div className="p-5 space-y-3">
-                      <div className="h-4 bg-gray-100 rounded animate-pulse w-3/4" />
-                      <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2" />
-                      <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
+                      <div className="w-3/4 h-4 bg-gray-100 rounded animate-pulse" />
+                      <div className="w-1/2 h-3 bg-gray-100 rounded animate-pulse" />
+                      <div className="w-2/3 h-3 bg-gray-100 rounded animate-pulse" />
                     </div>
                   </div>
                 ))}
               </div>
             ) : events.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <div className="flex items-center justify-center w-20 h-20 mb-4 bg-gray-100 rounded-full">
                   <Search className="w-8 h-8 text-gray-300" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-700 mb-2">Event tidak ditemukan</h3>
-                <p className="text-sm text-gray-400 max-w-xs mb-6">Coba ubah filter atau kata kunci pencarian kamu</p>
+                <h3 className="mb-2 text-lg font-bold text-gray-700">Event tidak ditemukan</h3>
+                <p className="max-w-xs mb-6 text-sm text-gray-400">Coba ubah filter atau kata kunci pencarian kamu</p>
                 <button onClick={resetFilters}
-                  className="text-sm font-semibold text-primary-900 border border-primary-900 px-5 py-2 rounded-xl hover:bg-primary-50 transition-colors">
+                  className="px-5 py-2 text-sm font-semibold transition-colors border text-primary-900 border-primary-900 rounded-xl hover:bg-primary-50">
                   Reset Filter
                 </button>
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   {events.map(event => (
                     <Link key={event.id} to={`/events/${event.id}`}
-                      className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                      <div className="relative h-44 bg-gradient-to-br from-primary-100 to-primary-200 overflow-hidden">
+                      className="overflow-hidden transition-all duration-300 bg-white border border-gray-100 group rounded-2xl hover:shadow-xl hover:-translate-y-1">
+                      <div className="relative overflow-hidden h-44 bg-gradient-to-br from-primary-100 to-primary-200">
                         {event.image_url ? (
                           <img src={event.image_url} alt={event.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center">
+                          <div className="flex items-center justify-center w-full h-full">
                             <Calendar className="w-10 h-10 text-primary-300" />
                           </div>
                         )}
@@ -399,25 +391,25 @@ export default function EventsPage() {
                           </span>
                         )}
                         {event.available_seats === 0 && (
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                             <span className="bg-white text-gray-800 text-xs font-bold px-3 py-1.5 rounded-lg">Sold Out</span>
                           </div>
                         )}
                       </div>
                       <div className="p-4">
-                        <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 group-hover:text-primary-900 transition-colors mb-3">
+                        <h3 className="mb-3 text-sm font-bold leading-snug text-gray-900 transition-colors line-clamp-2 group-hover:text-primary-900">
                           {event.name}
                         </h3>
                         <div className="space-y-1.5 mb-3">
-                          <div className="flex items-center gap-2 text-gray-400 text-xs">
+                          <div className="flex items-center gap-2 text-xs text-gray-400">
                             <Calendar className="w-3.5 h-3.5 shrink-0" />
                             <span>{formatDate(event.start_date)}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-gray-400 text-xs">
+                          <div className="flex items-center gap-2 text-xs text-gray-400">
                             <MapPin className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate">{event.location}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-gray-400 text-xs">
+                          <div className="flex items-center gap-2 text-xs text-gray-400">
                             <Users className="w-3.5 h-3.5 shrink-0" />
                             <span>{event.available_seats} kursi tersisa</span>
                           </div>
@@ -441,7 +433,7 @@ export default function EventsPage() {
                 {pagination && pagination.totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-10">
                     <button onClick={() => handlePageChange(page - 1)} disabled={page === 1}
-                      className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                      className="flex items-center justify-center transition-colors border border-gray-200 rounded-lg w-9 h-9 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
@@ -464,7 +456,7 @@ export default function EventsPage() {
                         )
                       )}
                     <button onClick={() => handlePageChange(page + 1)} disabled={page === pagination.totalPages}
-                      className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                      className="flex items-center justify-center transition-colors border border-gray-200 rounded-lg w-9 h-9 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -478,7 +470,7 @@ export default function EventsPage() {
       {/* MOBILE FILTER DRAWER */}
       {mobileFilter && (
         <>
-          <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setMobileFilter(false)} />
+          <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileFilter(false)} />
           <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto lg:hidden">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-gray-900">Filter Event</h3>
@@ -501,7 +493,7 @@ export default function EventsPage() {
               setPage={setPage}
             />
             <button onClick={() => setMobileFilter(false)}
-              className="w-full mt-6 bg-primary-900 text-white font-semibold py-3 rounded-xl hover:bg-primary-800 transition-colors">
+              className="w-full py-3 mt-6 font-semibold text-white transition-colors bg-primary-900 rounded-xl hover:bg-primary-800">
               Tampilkan Hasil
             </button>
           </div>

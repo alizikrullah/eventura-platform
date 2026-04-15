@@ -11,6 +11,7 @@ import {
 import AttendeeTable from '@/components/organizer/AttendeeTable'
 import DashboardStatCard from '@/components/organizer/DashboardStatCard'
 import TrendChartCard from '@/components/organizer/TrendChartCard'
+import { useDebounce } from '@/hooks/useDebounce'
 import { organizerDashboardService } from '@/services/organizerDashboardService'
 import type {
   OrganizerAttendeeItem,
@@ -58,10 +59,10 @@ export default function DashboardOverviewPage() {
   const [attendeeTotal, setAttendeeTotal] = useState(0)
   const [attendeeEventId, setAttendeeEventId] = useState<number | undefined>()
   const [attendeeSearchInput, setAttendeeSearchInput] = useState('')
-  const [attendeeSearch, setAttendeeSearch] = useState('')
   const [attendeeEventOptions, setAttendeeEventOptions] = useState<Array<{ id: number; name: string }>>([])
   const [attendeeLoading, setAttendeeLoading] = useState(true)
   const [attendeeError, setAttendeeError] = useState('')
+  const debouncedAttendeeSearch = useDebounce(attendeeSearchInput.trim(), 400)
 
   const yearOptions = useMemo(
     () => Array.from({ length: 5 }, (_, index) => defaultYear - index),
@@ -122,6 +123,10 @@ export default function DashboardOverviewPage() {
   }, [period, year, month, day])
 
   useEffect(() => {
+    setAttendeePage(1)
+  }, [attendeeEventId, debouncedAttendeeSearch])
+
+  useEffect(() => {
     const loadAttendees = async () => {
       setAttendeeLoading(true)
       setAttendeeError('')
@@ -131,7 +136,7 @@ export default function DashboardOverviewPage() {
           page: attendeePage,
           limit: 10,
           ...(attendeeEventId ? { eventId: attendeeEventId } : {}),
-          ...(attendeeSearch ? { search: attendeeSearch } : {}),
+          ...(debouncedAttendeeSearch ? { search: debouncedAttendeeSearch } : {}),
         })
 
         setAttendees(data.items)
@@ -149,7 +154,7 @@ export default function DashboardOverviewPage() {
     }
 
     loadAttendees()
-  }, [attendeePage, attendeeEventId, attendeeSearch])
+  }, [attendeePage, attendeeEventId, debouncedAttendeeSearch])
 
   const stats = [
     {
@@ -189,16 +194,18 @@ export default function DashboardOverviewPage() {
     },
   ]
 
-  const handleAttendeeSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setAttendeePage(1)
-    setAttendeeSearch(attendeeSearchInput.trim())
-  }
-
   const handleEventFilterChange = (value: string) => {
     setAttendeePage(1)
     setAttendeeEventId(value ? Number(value) : undefined)
   }
+
+  const clearAttendeeFilters = () => {
+    setAttendeeEventId(undefined)
+    setAttendeeSearchInput('')
+    setAttendeePage(1)
+  }
+
+  const hasActiveAttendeeFilters = Boolean(attendeeEventId || attendeeSearchInput.trim())
 
   return (
     <div className="space-y-6">
@@ -331,7 +338,7 @@ export default function DashboardOverviewPage() {
             <p className="text-sm text-gray-500 mt-1">Cari attendee berdasarkan event organizer atau invoice.</p>
           </div>
 
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-end">
             <label className="flex flex-col gap-1 text-sm text-gray-600 min-w-[220px]">
               Event
               <select
@@ -346,7 +353,7 @@ export default function DashboardOverviewPage() {
               </select>
             </label>
 
-            <form onSubmit={handleAttendeeSearchSubmit} className="flex items-end gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <label className="flex flex-col gap-1 text-sm text-gray-600 min-w-[240px]">
                 Search
                 <div className="relative">
@@ -359,15 +366,19 @@ export default function DashboardOverviewPage() {
                   />
                 </div>
               </label>
-              <button
-                type="submit"
-                className="rounded-xl bg-primary-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 transition-colors"
-              >
-                Terapkan
-              </button>
-            </form>
+              {hasActiveAttendeeFilters ? (
+                <button
+                  type="button"
+                  onClick={clearAttendeeFilters}
+                  className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+                >
+                  Reset
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
+        <p className="mt-3 text-xs text-gray-400">Pencarian attendee berjalan otomatis setelah kamu berhenti mengetik.</p>
       </div>
 
       {attendeeError ? (
@@ -385,6 +396,8 @@ export default function DashboardOverviewPage() {
           page={attendeePage}
           totalPages={attendeeTotalPages}
           total={attendeeTotal}
+          hasFilters={hasActiveAttendeeFilters}
+          onClearFilters={clearAttendeeFilters}
           onPreviousPage={() => setAttendeePage((current) => Math.max(1, current - 1))}
           onNextPage={() => setAttendeePage((current) => Math.min(attendeeTotalPages, current + 1))}
         />
