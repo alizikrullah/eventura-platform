@@ -22,6 +22,13 @@ router.get('/', validateEventFilters, eventController.getAllEvents)
  * Get event detail (public)
  */
 router.get('/my-events', auth, roleCheck(['organizer']), eventController.getOrganizerEvents)
+
+/**
+ * GET /api/events/organizer/:id/profile
+ * Get organizer public profile (public)
+ */
+router.get('/organizer/:id/profile', eventController.getOrganizerProfile)
+
 router.get('/:id', eventController.getEventById)
 
 /**

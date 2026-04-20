@@ -120,6 +120,48 @@ export const checkExpiredPointsAndCoupons = () => {
 };
 
 /**
+ * Helper: Deactivate events that have ended
+ * Dipanggil saat startup dan oleh cron job setiap jam
+ */
+const deactivateExpiredEvents = async () => {
+  const now = new Date();
+  const result = await prisma.event.updateMany({
+    where: {
+      is_active: true,
+      end_date: { lte: now },
+    },
+    data: { is_active: false },
+  });
+  if (result.count > 0) {
+    console.log(`[Cron] Deactivated ${result.count} expired events`);
+  }
+};
+
+/**
+ * Job 3: Auto-deactivate events that have ended
+ * 
+ * Schedule: Every hour (0 * * * *)
+ * Also runs once immediately on startup.
+ */
+export const checkExpiredEvents = () => {
+  // Jalankan sekali saat startup
+  deactivateExpiredEvents().catch((e: any) =>
+    console.error('[Cron] Startup deactivateExpiredEvents error:', e.message)
+  );
+
+  // Lanjut jadwal tiap jam
+  cron.schedule('0 * * * *', async () => {
+    try {
+      await deactivateExpiredEvents();
+    } catch (error: any) {
+      console.error('[Cron] Error in checkExpiredEvents:', error.message);
+    }
+  });
+
+  console.log('[Cron] checkExpiredEvents scheduled (runs every hour + on startup)');
+};
+
+/**
  * Start all cron jobs
  * 
  * Call this function in server.ts after database connection
@@ -127,5 +169,6 @@ export const checkExpiredPointsAndCoupons = () => {
 export const startCronJobs = () => {
   checkExpiredTransactions();
   checkExpiredPointsAndCoupons();
+  checkExpiredEvents();
   console.log('[Cron] All transaction jobs started');
 };

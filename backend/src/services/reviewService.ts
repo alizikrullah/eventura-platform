@@ -33,7 +33,8 @@ export const createReview = async (
   // 1. VALIDATE EVENT EXISTS
   // ========================================
   const event = await prisma.event.findUnique({
-    where: { id: eventId }
+    where: { id: eventId },
+    select: { id: true, is_active: true, end_date: true },
   });
 
   if (!event) {
@@ -41,21 +42,23 @@ export const createReview = async (
   }
 
   // ========================================
-  // 2. CHECK USER HAS ATTENDED (paid transaction)
+  // 2. CHECK EVENT HAS ENDED (is_active = false)
+  // Event hanya bisa di-review setelah is_active = false
+  // (is_active di-set false oleh cron job saat end_date tercapai)
+  // ========================================
+  if (event.is_active) {
+    throw new Error('You can only review after the event has ended');
+  }
+
+  // ========================================
+  // 3. CHECK USER HAS ATTENDED (paid transaction)
   // ========================================
   const attendance = await prisma.transaction.findFirst({
     where: {
       user_id: userId,
       event_id: eventId,
-      status: 'paid'
+      status: 'paid',
     },
-    include: {
-      event: {
-        select: {
-          end_date: true
-        }
-      }
-    }
   });
 
   if (!attendance) {
@@ -63,15 +66,7 @@ export const createReview = async (
   }
 
   // ========================================
-  // 2B. CHECK EVENT HAS ENDED
-  // ========================================
-  const now = new Date();
-  if (attendance.event.end_date > now) {
-    throw new Error('You can only review after the event has ended');
-  }
-
-  // ========================================
-  // 3. CHECK DUPLICATE REVIEW
+  // 4. CHECK DUPLICATE REVIEW
   // ========================================
   // Check if this transaction already has a review
   const existingReview = await prisma.review.findUnique({
@@ -85,7 +80,7 @@ export const createReview = async (
   }
 
   // ========================================
-  // 4. CREATE REVIEW
+  // 5. CREATE REVIEW
   // ========================================
   const review = await prisma.review.create({
     data: {
@@ -107,7 +102,7 @@ export const createReview = async (
   });
 
   // ========================================
-  // 5. UPDATE EVENT AVERAGE RATING
+  // 6. UPDATE EVENT AVERAGE RATING
   // ========================================
   await updateEventAverageRating(eventId);
 

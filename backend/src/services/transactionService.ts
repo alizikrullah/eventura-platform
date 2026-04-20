@@ -568,8 +568,13 @@ export const getTransactionDetail = async (
           location: true,
           venue: true,
           start_date: true,
+          end_date: true,
+          is_active: true,
           image_url: true
         }
+      },
+      review: {
+        select: { id: true }
       },
       transaction_items: {
         select: {
@@ -604,7 +609,8 @@ export const getTransactionDetail = async (
     status: transaction.status as any,
     payment_expired_at: transaction.payment_expired_at,
     created_at: transaction.created_at,
-    updated_at: transaction.updated_at
+    updated_at: transaction.updated_at,
+    has_review: !!transaction.review,
   };
 };
 

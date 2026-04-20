@@ -2,13 +2,14 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Upload, X, Plus, Trash2, ChevronLeft,
-  Calendar, MapPin, Users, Tag, FileText, Image, Loader2
+  Calendar, MapPin, Tag, FileText, Image, Loader2
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 
 interface TicketTypeInput {
   id: string;
+  db_id?: number;
   name: string;
   price: string;
   available_quantity: string;
@@ -21,7 +22,6 @@ interface FormData {
   location: string;
   venue: string;
   category_id: string;
-  total_seats: string;
   start_date: string;
   end_date: string;
 }
@@ -62,7 +62,7 @@ export default function EditEventPage() {
   const [fetching, setFetching] = useState(true);
   const [form, setForm] = useState<FormData>({
     name: '', description: '', location: '', venue: '',
-    category_id: '', total_seats: '', start_date: '', end_date: '',
+    category_id: '', start_date: '', end_date: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -87,7 +87,6 @@ export default function EditEventPage() {
           location: event.location || '',
           venue: event.venue || '',
           category_id: String(event.category_id || event.category?.id || ''),
-          total_seats: String(event.total_seats || ''),
           start_date: toLocalDatetime(event.start_date),
           end_date: toLocalDatetime(event.end_date),
         });
@@ -100,9 +99,10 @@ export default function EditEventPage() {
         if (event.ticket_types?.length > 0) {
           setTicketTypes(event.ticket_types.map((tt: any) => ({
             id: generateId(),
+            db_id: tt.id,
             name: tt.name || '',
             price: String(tt.price || 0),
-            available_quantity: String(tt.available_quantity || tt.quantity || ''),
+            available_quantity: String(tt.quantity || ''),
             description: tt.description || '',
           })));
         } else {
@@ -163,7 +163,6 @@ export default function EditEventPage() {
     if (!form.location.trim()) newErrors.location = 'Lokasi wajib diisi';
     if (!form.venue.trim()) newErrors.venue = 'Venue wajib diisi';
     if (!form.category_id) newErrors.category_id = 'Kategori wajib dipilih';
-    if (!form.total_seats || Number(form.total_seats) < 1) newErrors.total_seats = 'Kapasitas minimal 1 kursi';
     if (!form.start_date) newErrors.start_date = 'Tanggal mulai wajib diisi';
     if (!form.end_date) newErrors.end_date = 'Tanggal selesai wajib diisi';
     if (form.start_date && form.end_date && form.start_date >= form.end_date) {
@@ -192,12 +191,12 @@ export default function EditEventPage() {
       formData.append('location', form.location);
       formData.append('venue', form.venue);
       formData.append('category_id', form.category_id);
-      formData.append('total_seats', form.total_seats);
       formData.append('start_date', new Date(form.start_date).toISOString());
       formData.append('end_date', new Date(form.end_date).toISOString());
       if (imageFile) formData.append('image', imageFile);
       formData.append('ticket_types', JSON.stringify(
         ticketTypes.map(tt => ({
+          ...(tt.db_id ? { db_id: tt.db_id } : {}),
           name: tt.name,
           price: Number(tt.price),
           available_quantity: Number(tt.available_quantity),
@@ -351,17 +350,6 @@ export default function EditEventPage() {
                   </div>
                   {errors.end_date && <p className="text-xs text-red-500 mt-1">{errors.end_date}</p>}
                 </div>
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">
-                  Total Kapasitas <span className="text-red-400">*</span>
-                </label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input type="number" name="total_seats" value={form.total_seats} onChange={handleChange}
-                    min={1} placeholder="Contoh: 1000" className={`${inputClass('total_seats')} pl-10`} />
-                </div>
-                {errors.total_seats && <p className="text-xs text-red-500 mt-1">{errors.total_seats}</p>}
               </div>
             </div>
           </div>

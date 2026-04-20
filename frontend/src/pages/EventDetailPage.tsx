@@ -41,7 +41,7 @@ interface Event {
   image_url?: string;
   is_active: boolean;
   category?: { id: number; name: string; slug: string };
-  organizer?: { id: number; name: string; email: string; profile_picture?: string };
+  organizer?: { id: number; name: string; email: string; profile_picture?: string; overall_rating?: number; total_reviews?: number };
   ticket_types: TicketType[];
   reviews: Review[];
   average_rating: number;
@@ -323,17 +323,32 @@ export default function EventDetailPage() {
             {event.organizer && (
               <div>
                 <h2 className="text-lg font-bold text-gray-900 mb-4">Diselenggarakan Oleh</h2>
-                <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-4">
+                <Link
+                  to={`/organizers/${event.organizer.id}`}
+                  className="flex items-center gap-4 bg-gray-50 rounded-2xl p-4 hover:bg-primary-50 transition-colors group"
+                >
                   <div className="w-14 h-14 bg-primary-900 rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0 overflow-hidden">
                     {event.organizer.profile_picture
                       ? <img src={event.organizer.profile_picture} alt={event.organizer.name} className="w-full h-full object-cover" />
                       : event.organizer.name.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <p className="font-bold text-gray-900">{event.organizer.name}</p>
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-900 group-hover:text-primary-900 transition-colors">{event.organizer.name}</p>
                     <p className="text-sm text-gray-400">{event.organizer.email}</p>
+                    {event.organizer.overall_rating != null && event.organizer.overall_rating > 0 && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                        <span className="text-xs font-semibold text-gray-600">
+                          {event.organizer.overall_rating.toFixed(1)}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          ({event.organizer.total_reviews} ulasan)
+                        </span>
+                      </div>
+                    )}
                   </div>
-                </div>
+                  <ChevronLeft className="w-4 h-4 text-gray-300 group-hover:text-primary-900 transition-colors rotate-180" />
+                </Link>
               </div>
             )}
 

@@ -5,7 +5,7 @@ import prisma from '../config/prisma'
  * Validate create event payload
  */
 export const validateCreateEvent = async (req: Request, res: Response, next: NextFunction) => {
-  const { name, location, total_seats, start_date, end_date, category_id } = req.body
+  const { name, location, start_date, end_date, category_id } = req.body
 
   const errors: string[] = []
 
@@ -15,9 +15,6 @@ export const validateCreateEvent = async (req: Request, res: Response, next: Nex
   }
   if (!location || location.trim().length === 0) {
     errors.push('Location is required')
-  }
-  if (!total_seats || total_seats <= 0) {
-    errors.push('Total seats must be greater than 0')
   }
   if (!start_date) {
     errors.push('Start date is required')
@@ -78,17 +75,13 @@ export const validateCreateEvent = async (req: Request, res: Response, next: Nex
  * Validate update event payload
  */
 export const validateUpdateEvent = async (req: Request, res: Response, next: NextFunction) => {
-  const { name, total_seats, start_date, end_date, category_id } = req.body
+  const { name, start_date, end_date, category_id } = req.body
 
   const errors: string[] = []
 
   // Optional fields but must be valid if provided
   if (name !== undefined && name.trim().length === 0) {
     errors.push('Event name cannot be empty')
-  }
-
-  if (total_seats !== undefined && total_seats <= 0) {
-    errors.push('Total seats must be greater than 0')
   }
 
   // Validate dates if both provided
@@ -152,8 +145,8 @@ export const validateEventFilters = (req: Request, res: Response, next: NextFunc
     errors.push('Category must be a valid number')
   }
 
-  if (sort && !['newest', 'price_low', 'price_high', 'popular'].includes(sort as string)) {
-    errors.push('Sort must be one of: newest, price_low, price_high, popular')
+  if (sort && !['newest', 'oldest', 'price_low', 'price_high', 'popular'].includes(sort as string)) {
+    errors.push('Sort must be one of: newest, oldest, price_low, price_high, popular')
   }
 
   if (errors.length > 0) {
