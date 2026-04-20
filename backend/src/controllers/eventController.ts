@@ -232,3 +232,41 @@ export const getOrganizerEvents = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * GET /api/events/organizer/:id/profile
+ * Get organizer public profile (public)
+ */
+export const getOrganizerProfile = async (req: Request, res: Response) => {
+  try {
+    const organizerId = Number(req.params.id)
+
+    if (isNaN(organizerId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid organizer ID',
+      })
+    }
+
+    const result = await eventService.getOrganizerPublicProfile(organizerId)
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    })
+  } catch (error) {
+    console.error('Get organizer profile error:', error)
+
+    if (error instanceof Error && error.message === 'Organizer not found') {
+      return res.status(404).json({
+        success: false,
+        message: 'Organizer not found',
+      })
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to fetch organizer profile',
+    })
+  }
+}

@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Upload, X, Plus, Trash2, ChevronLeft,
-  Calendar, MapPin, Users, Tag, FileText, Image
+  Calendar, MapPin, Tag, FileText, Image
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
@@ -21,7 +21,6 @@ interface FormData {
   location: string;
   venue: string;
   category_id: string;
-  total_seats: string;
   start_date: string;
   end_date: string;
 }
@@ -56,7 +55,6 @@ export default function CreateEventPage() {
     location: '',
     venue: '',
     category_id: '',
-    total_seats: '',
     start_date: '',
     end_date: '',
   });
@@ -122,7 +120,6 @@ export default function CreateEventPage() {
     if (!form.location.trim()) newErrors.location = 'Lokasi wajib diisi';
     if (!form.venue.trim()) newErrors.venue = 'Venue wajib diisi';
     if (!form.category_id) newErrors.category_id = 'Kategori wajib dipilih';
-    if (!form.total_seats || Number(form.total_seats) < 1) newErrors.total_seats = 'Kapasitas minimal 1 kursi';
     if (!form.start_date) newErrors.start_date = 'Tanggal mulai wajib diisi';
     if (!form.end_date) newErrors.end_date = 'Tanggal selesai wajib diisi';
     if (form.start_date && form.end_date && form.start_date >= form.end_date) {
@@ -156,7 +153,6 @@ export default function CreateEventPage() {
       formData.append('location', form.location);
       formData.append('venue', form.venue);
       formData.append('category_id', form.category_id);
-      formData.append('total_seats', form.total_seats);
       formData.append('start_date', new Date(form.start_date).toISOString());
       formData.append('end_date', new Date(form.end_date).toISOString());
       if (imageFile) formData.append('image', imageFile);
@@ -363,25 +359,6 @@ export default function CreateEventPage() {
                 </div>
               </div>
 
-              {/* Total Seats */}
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">
-                  Total Kapasitas <span className="text-red-400">*</span>
-                </label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="number"
-                    name="total_seats"
-                    value={form.total_seats}
-                    onChange={handleChange}
-                    min={1}
-                    placeholder="Contoh: 1000"
-                    className={`${inputClass('total_seats')} pl-10`}
-                  />
-                </div>
-                {errors.total_seats && <p className="text-xs text-red-500 mt-1">{errors.total_seats}</p>}
-              </div>
             </div>
           </div>
 

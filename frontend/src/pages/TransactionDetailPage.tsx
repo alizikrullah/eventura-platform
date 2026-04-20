@@ -25,6 +25,7 @@ interface Transaction {
     venue: string;
     start_date: string;
     end_date: string;
+    is_active: boolean;
     image_url?: string;
   };
   items: TransactionItem[];
@@ -37,6 +38,7 @@ interface Transaction {
   payment_expired_at?: string;
   snap_token?: string;
   created_at: string;
+  has_review: boolean;
 }
 
 const STATUS_CONFIG = {
@@ -80,7 +82,7 @@ function CountdownTimer({ expiredAt }: { expiredAt: string }) {
   return <span className="font-mono font-bold text-warning-700">{timeLeft}</span>;
 }
 
-function ReviewForm({ transactionId, onSuccess }: { transactionId: number; onSuccess: () => void }) {
+function ReviewForm({ transactionId, eventId, onSuccess }: { transactionId: number; eventId: number; onSuccess: () => void }) {
   const { token } = useAuthStore();
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
@@ -94,8 +96,8 @@ function ReviewForm({ transactionId, onSuccess }: { transactionId: number; onSuc
     setError('');
     try {
       await axios.post(
-        `${import.meta.env.VITE_API_URL}/reviews`,
-        { transaction_id: transactionId, rating, comment },
+        `${import.meta.env.VITE_API_URL}/events/${eventId}/reviews`,
+        { rating, comment },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       onSuccess();
@@ -168,7 +170,9 @@ export default function TransactionDetailPage() {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/transactions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setTransaction(res.data.data?.transaction || res.data.data);
+      const data = res.data.data?.transaction || res.data.data;
+      setTransaction(data);
+      if (data?.has_review) setReviewSubmitted(true);
     } catch {
       setError('Transaksi tidak ditemukan.');
     } finally {
@@ -225,7 +229,7 @@ export default function TransactionDetailPage() {
   const StatusIcon = config.icon;
   const isPaid = transaction.status === 'paid';
   const isWaiting = transaction.status === 'waiting_payment';
-  const eventEnded = transaction.event.end_date ? new Date(transaction.event.end_date) < new Date() : false;
+  const eventEnded = transaction.event.is_active === false;
   const canReview = isPaid && eventEnded && !reviewSubmitted;
 
   const handlePayNow = () => {
@@ -393,6 +397,7 @@ export default function TransactionDetailPage() {
           {canReview && (
             <ReviewForm
               transactionId={transaction.id}
+              eventId={transaction.event.id}
               onSuccess={() => setReviewSubmitted(true)}
             />
           )}

@@ -131,6 +131,8 @@ export interface TransactionDetail {
     location: string;
     venue: string | null;
     start_date: Date;
+    end_date: Date;
+    is_active: boolean;
     image_url: string | null;
   };
   items: Array<{
@@ -149,6 +151,7 @@ export interface TransactionDetail {
   payment_expired_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  has_review: boolean;
 }
 
 /**

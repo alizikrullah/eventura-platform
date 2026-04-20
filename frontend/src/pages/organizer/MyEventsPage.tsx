@@ -159,7 +159,8 @@ export default function MyEventsPage() {
                               <MapPin className="w-3.5 h-3.5" /> {event.location}
                             </span>
                             <span className="flex items-center gap-1 text-xs text-gray-400">
-                              <Users className="w-3.5 h-3.5" /> {event.available_seats}/{event.total_seats} kursi
+                              <Users className="w-3.5 h-3.5" />
+                              {Math.max(0, event.total_seats - event.available_seats)}/{event.total_seats} kursi terjual
                             </span>
                           </div>
                         </div>

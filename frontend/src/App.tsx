@@ -28,6 +28,7 @@ import CreateEventPage from '@/pages/organizer/CreateEventPage';
 import EditEventPage from '@/pages/organizer/EditEventPage';
 import VoucherManagementPage from '@/pages/organizer/VoucherManagementPage';
 import TransactionsManagementPage from '@/pages/organizer/TransactionsManagementPage';
+import OrganizerProfilePage from '@/pages/OrganizerProfilePage';
 
 import { useAuthStore } from '@/store/authStore';
 
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/:id" element={<EventDetailPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/organizers/:id" element={<OrganizerProfilePage />} />
           <Route path="/403" element={<ForbiddenPage />} />
 
           {/* Protected routes - semua role */}
