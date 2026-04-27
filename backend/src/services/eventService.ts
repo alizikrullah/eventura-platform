@@ -194,7 +194,7 @@ export const getEventById = async (eventId: number) => {
         },
       },
       reviews: {
-        take: 5, // Latest 5 reviews
+        take: 5, // Latest 5 reviews, load more via /events/:id/reviews endpoint
         orderBy: { created_at: 'desc' },
         include: {
           user: {

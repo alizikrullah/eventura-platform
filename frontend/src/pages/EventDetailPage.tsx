@@ -105,29 +105,66 @@ function StarRating({ rating }: { rating: number }) {
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, token } = useAuthStore();
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
 
-  useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/events/${id}`);
-        const data = res.data.data?.event || res.data.data;
-        setEvent(data);
-        const firstAvailable = data.ticket_types?.find((tt: TicketType) => tt.available_quantity > 0);
-        if (firstAvailable) setSelectedTicket(firstAvailable);
-      } catch {
-        setError('Event tidak ditemukan atau sudah tidak tersedia.');
-      } finally {
-        setLoading(false);
+  // Review states
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHovered, setReviewHovered] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [hasReviewed, setHasReviewed] = useState(false);
+
+  // Load more reviews states
+  const [allReviews, setAllReviews] = useState<Review[]>([]);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewTotalPages, setReviewTotalPages] = useState(1);
+  const [loadingMoreReviews, setLoadingMoreReviews] = useState(false);
+
+  const fetchEvent = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/events/${id}`);
+      const data = res.data.data?.event || res.data.data;
+      setEvent(data);
+      setAllReviews(data.reviews || []);
+      const firstAvailable = data.ticket_types?.find((tt: TicketType) => tt.available_quantity > 0);
+      if (firstAvailable) setSelectedTicket(firstAvailable);
+      if (data.total_reviews > (data.reviews?.length || 0)) {
+        setReviewTotalPages(Math.ceil(data.total_reviews / 5));
       }
-    };
+    } catch {
+      setError('Event tidak ditemukan atau sudah tidak tersedia.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cek apakah user sudah review via dedicated endpoint (lebih reliable)
+  const checkMyReview = async () => {
+    if (!isAuthenticated || !token) return;
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_URL}/events/${id}/my-review`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data.data?.has_reviewed) setHasReviewed(true);
+    } catch {
+      // silent fail
+    }
+  };
+
+  useEffect(() => {
     fetchEvent();
   }, [id]);
+
+  useEffect(() => {
+    checkMyReview();
+  }, [id, isAuthenticated, token]);
 
   const handleBuyTicket = () => {
     if (!isAuthenticated) {
@@ -136,6 +173,51 @@ export default function EventDetailPage() {
     }
     if (user?.role === 'organizer') return;
     navigate(`/checkout/${id}`);
+  };
+
+  const loadMoreReviews = async () => {
+    setLoadingMoreReviews(true);
+    try {
+      const nextPage = reviewPage + 1;
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_URL}/events/${id}/reviews?page=${nextPage}&limit=5`
+      );
+      const data = res.data.data;
+      setAllReviews(prev => [...prev, ...(data.reviews || [])]);
+      setReviewPage(nextPage);
+      setReviewTotalPages(data.pagination?.totalPages || 1);
+    } catch {
+      // silent fail
+    } finally {
+      setLoadingMoreReviews(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (reviewRating === 0) { setReviewError('Pilih rating dulu.'); return; }
+    setReviewSubmitting(true);
+    setReviewError('');
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/events/${id}/reviews`,
+        { rating: reviewRating, comment: reviewComment },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setHasReviewed(true);
+      setReviewPage(1);
+      setAllReviews([]);
+      // Refresh event data biar rating + review list terupdate
+      await fetchEvent();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Gagal mengirim ulasan.';
+      if (msg.includes('already reviewed')) {
+        setHasReviewed(true);
+      } else {
+        setReviewError(msg);
+      }
+    } finally {
+      setReviewSubmitting(false);
+    }
   };
 
   const isSoldOut = event?.available_seats === 0;
@@ -353,7 +435,7 @@ export default function EventDetailPage() {
             )}
 
             {/* Reviews */}
-            {event.reviews?.length > 0 && (
+            {(allReviews.length > 0 || (event.total_reviews || 0) > 0) && (
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-gray-900">Ulasan ({event.total_reviews})</h2>
@@ -366,7 +448,7 @@ export default function EventDetailPage() {
                   )}
                 </div>
                 <div className="space-y-4">
-                  {event.reviews.map(review => (
+                  {allReviews.map(review => (
                     <div key={review.id} className="bg-gray-50 rounded-2xl p-4">
                       <div className="flex items-start gap-3 mb-3">
                         <div className="w-9 h-9 bg-primary-900 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 overflow-hidden">
@@ -386,6 +468,114 @@ export default function EventDetailPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Load more / Show less buttons */}
+                <div className="mt-4 text-center flex justify-center gap-3">
+                  {reviewPage < reviewTotalPages && (
+                    <button
+                      onClick={loadMoreReviews}
+                      disabled={loadingMoreReviews}
+                      className="px-5 py-2.5 text-sm font-semibold text-primary-900 border border-primary-200 rounded-xl hover:bg-primary-50 transition-colors disabled:opacity-50"
+                    >
+                      {loadingMoreReviews ? 'Memuat...' : `Lihat lebih banyak (${event.total_reviews - allReviews.length} lagi)`}
+                    </button>
+                  )}
+                  {allReviews.length > 5 && (
+                    <button
+                      onClick={() => {
+                        setAllReviews(event.reviews || []);
+                        setReviewPage(1);
+                        setReviewTotalPages(Math.ceil((event.total_reviews || 0) / 5));
+                      }}
+                      className="px-5 py-2.5 text-sm font-semibold text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                    >
+                      Tampilkan lebih sedikit
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Review Form - hanya muncul kalau event sudah selesai (is_active = false) */}
+            {!event.is_active && (
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 mb-4">
+                  {hasReviewed ? 'Ulasanmu' : 'Tulis Ulasan'}
+                </h2>
+                {hasReviewed ? (
+                  <div className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-2xl p-4">
+                    <div className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                      <Star className="w-4 h-4 text-green-600 fill-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-green-800">Ulasan berhasil dikirim!</p>
+                      <p className="text-xs text-green-600">Terima kasih sudah berbagi pengalamanmu.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-2xl p-5 space-y-4">
+                    {/* Star picker */}
+                    <div>
+                      <p className="text-sm text-gray-500 mb-2">Rating</p>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map(i => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setReviewRating(i)}
+                            onMouseEnter={() => setReviewHovered(i)}
+                            onMouseLeave={() => setReviewHovered(0)}
+                          >
+                            <Star className={`w-8 h-8 transition-colors ${
+                              i <= (reviewHovered || reviewRating)
+                                ? 'text-yellow-400 fill-yellow-400'
+                                : 'text-gray-200 fill-gray-200'
+                            }`} />
+                          </button>
+                        ))}
+                        {reviewRating > 0 && (
+                          <span className="ml-2 text-sm text-gray-500">
+                            {['', 'Buruk', 'Kurang', 'Cukup', 'Bagus', 'Luar Biasa'][reviewRating]}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Comment */}
+                    <div>
+                      <p className="text-sm text-gray-500 mb-2">Komentar <span className="text-gray-400">(opsional)</span></p>
+                      <textarea
+                        value={reviewComment}
+                        onChange={e => setReviewComment(e.target.value)}
+                        placeholder="Ceritakan pengalamanmu..."
+                        rows={3}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-900 focus:border-transparent resize-none bg-white"
+                      />
+                    </div>
+
+                    {reviewError && (
+                      <p className="text-sm text-red-500">{reviewError}</p>
+                    )}
+
+                    {!isAuthenticated ? (
+                      <p className="text-sm text-gray-400">
+                        <Link to="/login" className="text-primary-900 font-semibold hover:underline">Login</Link> untuk menulis ulasan.
+                      </p>
+                    ) : (
+                      <button
+                        onClick={handleSubmitReview}
+                        disabled={reviewSubmitting || reviewRating === 0}
+                        className={`w-full py-3 rounded-xl font-bold text-sm transition-colors ${
+                          reviewSubmitting || reviewRating === 0
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-primary-900 hover:bg-primary-800 text-white'
+                        }`}
+                      >
+                        {reviewSubmitting ? 'Mengirim...' : 'Kirim Ulasan'}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

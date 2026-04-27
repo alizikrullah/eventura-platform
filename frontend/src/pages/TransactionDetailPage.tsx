@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   ChevronLeft, Calendar, MapPin, Ticket, CheckCircle,
   Clock, XCircle, Star, AlertCircle, Loader2
@@ -10,6 +11,7 @@ import { useAuthStore } from '@/store/authStore';
 
 interface TransactionItem {
   ticket_name: string;
+  ticket_number?: string;
   quantity: number;
   price: number;
   subtotal: number;
@@ -82,76 +84,6 @@ function CountdownTimer({ expiredAt }: { expiredAt: string }) {
   return <span className="font-mono font-bold text-warning-700">{timeLeft}</span>;
 }
 
-function ReviewForm({ transactionId, eventId, onSuccess }: { transactionId: number; eventId: number; onSuccess: () => void }) {
-  const { token } = useAuthStore();
-  const [rating, setRating] = useState(0);
-  const [hovered, setHovered] = useState(0);
-  const [comment, setComment] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleSubmit = async () => {
-    if (rating === 0) { setError('Pilih rating dulu.'); return; }
-    setLoading(true);
-    setError('');
-    try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/events/${eventId}/reviews`,
-        { rating, comment },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      onSuccess();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Gagal submit review.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5">
-      <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-        Tulis Ulasan
-      </h3>
-      <div className="flex items-center gap-1 mb-4">
-        {[1, 2, 3, 4, 5].map(i => (
-          <button
-            key={i}
-            onMouseEnter={() => setHovered(i)}
-            onMouseLeave={() => setHovered(0)}
-            onClick={() => setRating(i)}
-            className="transition-transform hover:scale-110"
-          >
-            <Star className={`w-8 h-8 transition-colors ${i <= (hovered || rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200 fill-gray-200'}`} />
-          </button>
-        ))}
-        {rating > 0 && (
-          <span className="ml-2 text-sm text-gray-500">
-            {['', 'Sangat Buruk', 'Buruk', 'Cukup', 'Bagus', 'Luar Biasa'][rating]}
-          </span>
-        )}
-      </div>
-      <textarea
-        value={comment}
-        onChange={e => setComment(e.target.value)}
-        rows={3}
-        placeholder="Ceritakan pengalaman kamu (opsional)..."
-        className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-900 focus:border-transparent resize-none"
-      />
-      {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-      <button
-        onClick={handleSubmit}
-        disabled={loading || rating === 0}
-        className="mt-3 w-full py-3 bg-primary-900 hover:bg-primary-800 text-white font-bold text-sm rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-      >
-        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-        {loading ? 'Mengirim...' : 'Kirim Ulasan'}
-      </button>
-    </div>
-  );
-}
-
 export default function TransactionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -160,7 +92,6 @@ export default function TransactionDetailPage() {
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [cancelError, setCancelError] = useState('');
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -172,7 +103,6 @@ export default function TransactionDetailPage() {
       });
       const data = res.data.data?.transaction || res.data.data;
       setTransaction(data);
-      if (data?.has_review) setReviewSubmitted(true);
     } catch {
       setError('Transaksi tidak ditemukan.');
     } finally {
@@ -230,7 +160,6 @@ export default function TransactionDetailPage() {
   const isPaid = transaction.status === 'paid';
   const isWaiting = transaction.status === 'waiting_payment';
   const eventEnded = transaction.event.is_active === false;
-  const canReview = isPaid && eventEnded && !reviewSubmitted;
 
   const handlePayNow = () => {
     if (!window.snap || !transaction.snap_token) return;
@@ -315,6 +244,45 @@ export default function TransactionDetailPage() {
             </div>
           </div>
 
+          {/* Virtual Ticket - hanya tampil kalau paid */}
+          {isPaid && transaction.items?.some(item => item.ticket_number) && (
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-primary-900" /> Tiket Kamu
+              </h3>
+              <div className="space-y-4">
+                {transaction.items?.map((item, i) => item.ticket_number && (
+                  <div key={i} className="flex flex-col sm:flex-row items-center gap-5 bg-gray-50 rounded-2xl p-5">
+                    {/* QR Code */}
+                    <div className="bg-white p-3 rounded-xl shadow-sm shrink-0">
+                      <QRCodeSVG
+                        value={item.ticket_number}
+                        size={120}
+                        level="M"
+                        includeMargin={false}
+                      />
+                    </div>
+                    {/* Ticket Info */}
+                    <div className="flex-1 text-center sm:text-left">
+                      <p className="text-xs text-gray-400 mb-1">Tipe Tiket</p>
+                      <p className="font-bold text-gray-900 text-lg mb-3">{item.ticket_name}</p>
+                      <p className="text-xs text-gray-400 mb-1">Nomor Tiket</p>
+                      <p className="font-mono text-sm font-bold text-primary-900 tracking-wider bg-primary-50 px-3 py-1.5 rounded-lg inline-block">
+                        {item.ticket_number}
+                      </p>
+                      {item.quantity > 1 && (
+                        <p className="text-xs text-gray-400 mt-2">× {item.quantity} tiket</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-3">
+                        Tunjukkan QR code ini saat masuk event
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Ticket Items */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
@@ -394,28 +362,25 @@ export default function TransactionDetailPage() {
           )}
 
           {/* Review Section */}
-          {canReview && (
-            <ReviewForm
-              transactionId={transaction.id}
-              eventId={transaction.event.id}
-              onSuccess={() => setReviewSubmitted(true)}
-            />
-          )}
-
-          {reviewSubmitted && (
-            <div className="flex items-center gap-3 bg-success-50 border border-success-500 rounded-2xl p-4">
-              <CheckCircle className="w-5 h-5 text-success-500 shrink-0" />
-              <div>
-                <p className="font-bold text-success-700 text-sm">Ulasan berhasil dikirim!</p>
-                <p className="text-xs text-success-600">Terima kasih sudah berbagi pengalaman.</p>
-              </div>
+          {isPaid && eventEnded && (
+            <div className="flex items-center gap-3 bg-primary-50 border border-primary-200 rounded-2xl p-4">
+              <Star className="w-5 h-5 text-primary-900 shrink-0" />
+              <p className="text-sm text-primary-900">
+                Event ini sudah selesai.{' '}
+                <Link
+                  to={`/events/${transaction.event.id}`}
+                  className="font-semibold underline hover:text-primary-700"
+                >
+                  Tulis ulasanmu di halaman event
+                </Link>
+              </p>
             </div>
           )}
 
           {isPaid && !eventEnded && (
-            <div className="flex items-center gap-3 bg-primary-50 border border-primary-200 rounded-2xl p-4">
-              <Star className="w-5 h-5 text-primary-900 shrink-0" />
-              <p className="text-sm text-primary-900">
+            <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-2xl p-4">
+              <Star className="w-5 h-5 text-gray-400 shrink-0" />
+              <p className="text-sm text-gray-500">
                 Kamu bisa memberikan ulasan setelah event selesai.
               </p>
             </div>

@@ -62,7 +62,7 @@ export const createReview = async (
   });
 
   if (!attendance) {
-    throw new Error('You must attend the event before writing a review');
+    throw new Error('Kamu tidak membeli tiket event ini, jadi tidak bisa menulis ulasan.');
   }
 
   // ========================================
@@ -274,8 +274,19 @@ export const deleteReview = async (reviewId: number, userId: number) => {
 };
 
 // ========================================
-// HELPER: UPDATE EVENT AVERAGE RATING
+// GET USER REVIEW FOR EVENT
 // ========================================
+export const getUserReviewForEvent = async (userId: number, eventId: number) => {
+  const review = await prisma.review.findFirst({
+    where: { user_id: userId, event_id: eventId },
+    include: {
+      user: {
+        select: { id: true, name: true, profile_picture: true }
+      }
+    }
+  });
+  return review;
+};
 const updateEventAverageRating = async (eventId: number) => {
   // Calculate average rating from all reviews for this event
   const result = await prisma.review.aggregate({
