@@ -584,6 +584,75 @@ export const deleteEvent = async (eventId: number, organizerId: number) => {
 }
 
 /**
+ * Get past events (is_active = false) with search and category filter
+ */
+export const getPastEvents = async (filters: {
+  page?: number
+  limit?: number
+  category?: number
+  location?: string
+  search?: string
+}) => {
+  const { page = 1, limit = 9, category, location, search } = filters
+  const skip = (Number(page) - 1) * Number(limit)
+  const take = Number(limit)
+
+  const where: any = { is_active: false }
+
+  if (category) where.category_id = Number(category)
+  if (location) where.location = { contains: location, mode: 'insensitive' }
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+    ]
+  }
+
+  const [events, total] = await Promise.all([
+    prisma.event.findMany({
+      where,
+      skip,
+      take,
+      orderBy: { end_date: 'desc' },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+        organizer: { select: { id: true, name: true, email: true } },
+        ticket_types: { select: { price: true } },
+        _count: { select: { reviews: true } },
+      },
+    }),
+    prisma.event.count({ where }),
+  ])
+
+  const eventsWithRating = await Promise.all(
+    events.map(async (event) => {
+      const avgRating = await prisma.review.aggregate({
+        where: { event_id: event.id },
+        _avg: { rating: true },
+      })
+      return {
+        ...event,
+        average_rating: avgRating._avg.rating || 0,
+        total_reviews: event._count.reviews,
+        min_price: event.ticket_types.length > 0
+          ? Math.min(...event.ticket_types.map(tt => tt.price))
+          : 0,
+      }
+    }),
+  )
+
+  return {
+    events: eventsWithRating,
+    pagination: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPages: Math.ceil(total / Number(limit)),
+    },
+  }
+}
+
+ /**
  * Get organizer public profile
  * Returns organizer info + active events + past events
  */

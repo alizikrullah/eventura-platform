@@ -215,6 +215,28 @@ export const deleteEvent = async (req: AuthRequest, res: Response) => {
     })
   }
 }
+/**
+ * GET /api/events/past
+ * Get past events (is_active = false)
+ */
+export const getPastEvents = async (req: Request, res: Response) => {
+  try {
+    const result = await eventService.getPastEvents({
+      page: req.query.page ? Number(req.query.page) : 1,
+      limit: req.query.limit ? Number(req.query.limit) : 9,
+      category: req.query.category ? Number(req.query.category) : undefined,
+      location: req.query.location as string,
+      search: req.query.search as string,
+    })
+    return res.status(200).json({ success: true, data: result })
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to fetch past events',
+    })
+  }
+}
+
 export const getOrganizerEvents = async (req: AuthRequest, res: Response) => {
   try {
     const organizerId = req.user!.id;
