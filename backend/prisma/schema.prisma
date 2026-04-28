@@ -242,6 +242,7 @@ model TransactionItem {
   transaction_id Int
   ticket_type_id Int?
   ticket_name    String
+  ticket_number  String?    @unique
   quantity       Int
   price          Int
   subtotal       Int

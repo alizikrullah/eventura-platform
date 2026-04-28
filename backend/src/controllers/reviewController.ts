@@ -43,7 +43,7 @@ export const createReview = async (req: Request, res: Response) => {
     }
 
     if (
-      error.message === 'You must attend the event before writing a review' ||
+      error.message.includes('tidak membeli tiket') ||
       error.message === 'You have already reviewed this event' ||
       error.message === 'You can only review after the event has ended'
     ) {
@@ -163,8 +163,27 @@ export const updateReview = async (req: Request, res: Response) => {
 };
 
 // ========================================
-// DELETE REVIEW
+// GET MY REVIEW FOR EVENT
 // ========================================
+export const getMyReview = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const eventId = parseInt(req.params.eventId as string);
+
+    const review = await reviewService.getUserReviewForEvent(userId, eventId);
+
+    return res.status(200).json({
+      success: true,
+      data: { review, has_reviewed: !!review }
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to check review status',
+      error: error.message
+    });
+  }
+};
 export const deleteReview = async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;

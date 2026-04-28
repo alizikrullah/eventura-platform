@@ -50,8 +50,30 @@ const generateInvoiceNumber = async (): Promise<string> => {
 };
 
 /**
- * Calculate discount amount
+ * Generate unique ticket number per transaction item
+ * Format: TKT-YYYYMMDD-XXXXXX
+ * Example: TKT-20260419-A1B2C3
  */
+const generateTicketNumber = async (): Promise<string> => {
+  const date = format(new Date(), 'yyyyMMdd');
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+  for (let i = 0; i < 10; i++) {
+    let suffix = '';
+    for (let j = 0; j < 6; j++) {
+      suffix += chars[Math.floor(Math.random() * chars.length)];
+    }
+    const ticketNumber = `TKT-${date}-${suffix}`;
+
+    const exists = await prisma.transactionItem.findUnique({
+      where: { ticket_number: ticketNumber }
+    });
+    if (!exists) return ticketNumber;
+  }
+  throw new Error('Cannot generate unique ticket number');
+};
+
+
 const calculateDiscount = (
   price: number,
   discountType: string,
@@ -390,11 +412,13 @@ export const createTransaction = async (
 
     // 8.7. Create transaction items
     for (const item of ticketItems) {
+      const ticketNumber = await generateTicketNumber();
       await tx.transactionItem.create({
         data: {
           transaction_id: transaction.id,
           ticket_type_id: item.ticket_type_id,
           ticket_name: item.ticket_name,
+          ticket_number: ticketNumber,
           quantity: item.quantity,
           price: item.price,
           subtotal: item.subtotal
@@ -580,6 +604,7 @@ export const getTransactionDetail = async (
         select: {
           id: true,
           ticket_name: true,
+          ticket_number: true,
           quantity: true,
           price: true,
           subtotal: true

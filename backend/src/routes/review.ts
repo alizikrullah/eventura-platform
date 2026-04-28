@@ -50,6 +50,12 @@ router.get('/reviews/:id', reviewController.getReviewById);
 // ========================================
 
 /**
+ * GET /api/events/:eventId/my-review
+ * Check if authenticated user has reviewed this event
+ */
+router.get('/events/:eventId/my-review', auth, reviewController.getMyReview);
+
+/**
  * POST /api/events/:eventId/reviews
  * 
  * Create a review for an event

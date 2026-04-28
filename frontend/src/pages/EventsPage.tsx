@@ -12,12 +12,14 @@ interface Event {
   name: string;
   location: string;
   start_date: string;
+  end_date?: string;
   price: number;
   available_seats: number;
   image_url?: string;
   category?: { name: string };
   organizer?: { name: string };
   average_rating?: number;
+  total_reviews?: number;
   min_price?: number;
 }
 
@@ -170,9 +172,14 @@ export default function EventsPage() {
   const [mobileFilter, setMobileFilter] = useState(false);
 
   const [events, setEvents]         = useState<Event[]>([]);
+  const [pastEvents, setPastEvents] = useState<Event[]>([]);
+  const [activeTab, setActiveTab]   = useState<'active' | 'past'>('active');
   const [categories, setCategories] = useState<Category[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [pastPagination, setPastPagination] = useState<Pagination | null>(null);
+  const [pastPage, setPastPage]     = useState(1);
   const [loading, setLoading]       = useState(true);
+  const [loadingPast, setLoadingPast] = useState(false);
 
   const debouncedSearch   = useDebounce(search, 500);
   const debouncedLocation = useDebounce(location, 500);
@@ -205,7 +212,25 @@ export default function EventsPage() {
     }
   }, [debouncedSearch, categoryId, debouncedLocation, startDate, endDate, sort, page]);
 
+  const fetchPastEvents = useCallback(async () => {
+    setLoadingPast(true);
+    try {
+      const params: Record<string, string> = { page: String(pastPage), limit: '9' };
+      if (debouncedSearch)   params.search   = debouncedSearch;
+      if (categoryId)        params.category = categoryId;
+      if (debouncedLocation) params.location = debouncedLocation;
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/events/past`, { params });
+      setPastEvents(res.data.data?.events || []);
+      setPastPagination(res.data.data?.pagination || null);
+    } catch {
+      setPastEvents([]);
+    } finally {
+      setLoadingPast(false);
+    }
+  }, [debouncedSearch, categoryId, debouncedLocation, pastPage]);
+
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
+  useEffect(() => { if (activeTab === 'past') fetchPastEvents(); }, [fetchPastEvents, activeTab]);
 
   const resetFilters = () => {
     setSearch(''); setCategoryId(''); setLocation('');
@@ -323,11 +348,37 @@ export default function EventsPage() {
 
           {/* EVENTS GRID */}
           <div className="flex-1 min-w-0">
+
+            {/* Tab */}
+            <div className="flex border-b border-gray-200 mb-5">
+              <button
+                onClick={() => setActiveTab('active')}
+                className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                  activeTab === 'active'
+                    ? 'border-primary-900 text-primary-900'
+                    : 'border-transparent text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                Event Aktif
+              </button>
+              <button
+                onClick={() => { setActiveTab('past'); }}
+                className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                  activeTab === 'past'
+                    ? 'border-primary-900 text-primary-900'
+                    : 'border-transparent text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                Event Selesai
+              </button>
+            </div>
+
             <div className="flex items-center justify-between mb-5">
               <p className="text-sm text-gray-500">
-                {loading ? 'Memuat...' : pagination
-                  ? `${pagination.total} event ditemukan`
-                  : `${events.length} event ditemukan`}
+                {(activeTab === 'active' ? loading : loadingPast) ? 'Memuat...' :
+                  activeTab === 'active'
+                    ? (pagination ? `${pagination.total} event ditemukan` : `${events.length} event ditemukan`)
+                    : (pastPagination ? `${pastPagination.total} event selesai` : `${pastEvents.length} event selesai`)}
               </p>
               <select
                 value={sort}
@@ -340,7 +391,7 @@ export default function EventsPage() {
               </select>
             </div>
 
-            {loading ? (
+            {(activeTab === 'active' ? loading : loadingPast) ? (
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {Array.from({ length: 9 }).map((_, i) => (
                   <div key={i} className="overflow-hidden bg-white border border-gray-100 rounded-2xl">
@@ -353,22 +404,28 @@ export default function EventsPage() {
                   </div>
                 ))}
               </div>
-            ) : events.length === 0 ? (
+            ) : (activeTab === 'active' ? events : pastEvents).length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="flex items-center justify-center w-20 h-20 mb-4 bg-gray-100 rounded-full">
                   <Search className="w-8 h-8 text-gray-300" />
                 </div>
-                <h3 className="mb-2 text-lg font-bold text-gray-700">Event tidak ditemukan</h3>
-                <p className="max-w-xs mb-6 text-sm text-gray-400">Coba ubah filter atau kata kunci pencarian kamu</p>
-                <button onClick={resetFilters}
-                  className="px-5 py-2 text-sm font-semibold transition-colors border text-primary-900 border-primary-900 rounded-xl hover:bg-primary-50">
-                  Reset Filter
-                </button>
+                <h3 className="mb-2 text-lg font-bold text-gray-700">
+                  {activeTab === 'active' ? 'Event tidak ditemukan' : 'Belum ada event selesai'}
+                </h3>
+                <p className="max-w-xs mb-6 text-sm text-gray-400">
+                  {activeTab === 'active' ? 'Coba ubah filter atau kata kunci pencarian kamu' : 'Event yang sudah berakhir akan muncul di sini'}
+                </p>
+                {activeTab === 'active' && (
+                  <button onClick={resetFilters}
+                    className="px-5 py-2 text-sm font-semibold transition-colors border text-primary-900 border-primary-900 rounded-xl hover:bg-primary-50">
+                    Reset Filter
+                  </button>
+                )}
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                  {events.map(event => (
+                  {(activeTab === 'active' ? events : pastEvents).map(event => (
                     <Link key={event.id} to={`/events/${event.id}`}
                       className="overflow-hidden transition-all duration-300 bg-white border border-gray-100 group rounded-2xl hover:shadow-xl hover:-translate-y-1">
                       <div className="relative overflow-hidden h-44 bg-gradient-to-br from-primary-100 to-primary-200">
@@ -385,12 +442,17 @@ export default function EventsPage() {
                             {event.category.name}
                           </span>
                         )}
-                        {(event.min_price === 0 || event.price === 0) && (
+                        {activeTab === 'past' && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                            <span className="bg-white text-gray-800 text-xs font-bold px-3 py-1.5 rounded-lg">Selesai</span>
+                          </div>
+                        )}
+                        {activeTab === 'active' && (event.min_price === 0 || event.price === 0) && (
                           <span className="absolute top-3 right-3 bg-success-500 text-white text-xs font-semibold px-2.5 py-1 rounded-lg">
                             Gratis
                           </span>
                         )}
-                        {event.available_seats === 0 && (
+                        {activeTab === 'active' && event.available_seats === 0 && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                             <span className="bg-white text-gray-800 text-xs font-bold px-3 py-1.5 rounded-lg">Sold Out</span>
                           </div>
@@ -403,16 +465,18 @@ export default function EventsPage() {
                         <div className="space-y-1.5 mb-3">
                           <div className="flex items-center gap-2 text-xs text-gray-400">
                             <Calendar className="w-3.5 h-3.5 shrink-0" />
-                            <span>{formatDate(event.start_date)}</span>
+                            <span>{formatDate(activeTab === 'past' && event.end_date ? event.end_date : event.start_date)}</span>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-gray-400">
                             <MapPin className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate">{event.location}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-400">
-                            <Users className="w-3.5 h-3.5 shrink-0" />
-                            <span>{event.available_seats} kursi tersisa</span>
-                          </div>
+                          {activeTab === 'active' && (
+                            <div className="flex items-center gap-2 text-xs text-gray-400">
+                              <Users className="w-3.5 h-3.5 shrink-0" />
+                              <span>{event.available_seats} kursi tersisa</span>
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center justify-between pt-3 border-t border-gray-50">
                           <span className="text-base font-extrabold text-primary-900">
@@ -422,6 +486,9 @@ export default function EventsPage() {
                             <div className="flex items-center gap-1">
                               <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
                               <span className="text-xs font-semibold text-gray-600">{event.average_rating.toFixed(1)}</span>
+                              {activeTab === 'past' && event.total_reviews && (
+                                <span className="text-xs text-gray-400">({event.total_reviews})</span>
+                              )}
                             </div>
                           ) : null}
                         </div>
@@ -430,37 +497,44 @@ export default function EventsPage() {
                   ))}
                 </div>
 
-                {pagination && pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-10">
-                    <button onClick={() => handlePageChange(page - 1)} disabled={page === 1}
-                      className="flex items-center justify-center transition-colors border border-gray-200 rounded-lg w-9 h-9 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-                      .filter(p => p === 1 || p === pagination.totalPages || Math.abs(p - page) <= 1)
-                      .reduce<(number | string)[]>((acc, p, i, arr) => {
-                        if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('...');
-                        acc.push(p);
-                        return acc;
-                      }, [])
-                      .map((p, i) =>
-                        p === '...' ? (
-                          <span key={`e-${i}`} className="px-1 text-gray-400">...</span>
-                        ) : (
-                          <button key={p} onClick={() => handlePageChange(p as number)}
-                            className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
-                              page === p ? 'bg-primary-900 text-white' : 'border border-gray-200 hover:bg-gray-50 text-gray-700'
-                            }`}>
-                            {p}
-                          </button>
-                        )
-                      )}
-                    <button onClick={() => handlePageChange(page + 1)} disabled={page === pagination.totalPages}
-                      className="flex items-center justify-center transition-colors border border-gray-200 rounded-lg w-9 h-9 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
+                {/* Pagination */}
+                {(() => {
+                  const pag = activeTab === 'active' ? pagination : pastPagination;
+                  const currentPage = activeTab === 'active' ? page : pastPage;
+                  const setCurrentPage = activeTab === 'active' ? handlePageChange : (p: number) => { setPastPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+                  if (!pag || pag.totalPages <= 1) return null;
+                  return (
+                    <div className="flex items-center justify-center gap-2 mt-10">
+                      <button onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}
+                        className="flex items-center justify-center transition-colors border border-gray-200 rounded-lg w-9 h-9 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      {Array.from({ length: pag.totalPages }, (_, i) => i + 1)
+                        .filter(p => p === 1 || p === pag.totalPages || Math.abs(p - currentPage) <= 1)
+                        .reduce<(number | string)[]>((acc, p, i, arr) => {
+                          if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('...');
+                          acc.push(p);
+                          return acc;
+                        }, [])
+                        .map((p, i) =>
+                          p === '...' ? (
+                            <span key={`e-${i}`} className="px-1 text-gray-400">...</span>
+                          ) : (
+                            <button key={p} onClick={() => setCurrentPage(p as number)}
+                              className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
+                                currentPage === p ? 'bg-primary-900 text-white' : 'border border-gray-200 hover:bg-gray-50 text-gray-700'
+                              }`}>
+                              {p}
+                            </button>
+                          )
+                        )}
+                      <button onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === pag.totalPages}
+                        className="flex items-center justify-center transition-colors border border-gray-200 rounded-lg w-9 h-9 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })()}
               </>
             )}
           </div>
