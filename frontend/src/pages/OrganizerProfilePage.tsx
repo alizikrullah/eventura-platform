@@ -249,11 +249,11 @@ export default function OrganizerProfilePage() {
                 <div className="flex flex-wrap lg:justify-center gap-2 text-xs text-gray-400">
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
-                    {activeEvents.length} event aktif
+                    {activeEvents.length} Event Aktif
                   </span>
                   <span className="flex items-center gap-1">
                     <Users className="w-3 h-3" />
-                    {pastEvents.length} event lalu
+                    {pastEvents.length} Event Selesai
                   </span>
                 </div>
               </div>
@@ -285,7 +285,7 @@ export default function OrganizerProfilePage() {
                     : 'border-transparent text-gray-400 hover:text-gray-600'
                 }`}
               >
-                Event Lalu
+                Event Selesai
                 <span className="ml-1.5 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
                   {pastEvents.length}
                 </span>
@@ -304,7 +304,7 @@ export default function OrganizerProfilePage() {
                   <Calendar className="w-7 h-7 text-gray-300" />
                 </div>
                 <p className="text-gray-500 font-semibold mb-1">
-                  {activeTab === 'active' ? 'Tidak ada event aktif' : 'Tidak ada event lalu'}
+                  {activeTab === 'active' ? 'Tidak ada event aktif' : 'Tidak ada event selesai'}
                 </p>
                 <p className="text-sm text-gray-400">
                   {activeTab === 'active'

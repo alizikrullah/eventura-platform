@@ -145,8 +145,8 @@ export const validateEventFilters = (req: Request, res: Response, next: NextFunc
     errors.push('Category must be a valid number')
   }
 
-  if (sort && !['newest', 'oldest', 'price_low', 'price_high', 'popular'].includes(sort as string)) {
-    errors.push('Sort must be one of: newest, oldest, price_low, price_high, popular')
+  if (sort && !['newest', 'oldest', 'upcoming', 'price_low', 'price_high', 'popular'].includes(sort as string)) {
+    errors.push('Sort must be one of: newest, oldest, upcoming, price_low, price_high, popular')
   }
 
   if (errors.length > 0) {
