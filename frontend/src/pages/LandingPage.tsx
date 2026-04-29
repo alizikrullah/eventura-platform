@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ArrowRight, Calendar, MapPin, Users, Star, Zap, Music, Trophy, Cpu, UtensilsCrossed, Palette, GraduationCap, Heart, Camera } from 'lucide-react';
 import axios from 'axios';
-import { useDebounce } from '@/hooks/useDebounce';
 
 interface Event {
   id: number;
@@ -48,15 +47,14 @@ export default function LandingPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
-  const [hasSearchInteraction, setHasSearchInteraction] = useState(false);
-  const debouncedSearch = useDebounce(search.trim(), 400);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const today = new Date().toISOString().split('T')[0];
         const [eventsRes, categoriesRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_API_URL}/events?limit=6&sort=newest`),
+          axios.get(`${import.meta.env.VITE_API_URL}/events?limit=6&sort=upcoming&date_from=${today}`),
           axios.get(`${import.meta.env.VITE_API_URL}/categories`),
         ]);
         setEvents(eventsRes.data.data?.events || eventsRes.data.data || []);
@@ -70,15 +68,8 @@ export default function LandingPage() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    if (!hasSearchInteraction || !debouncedSearch) return;
-
-    navigate(`/events?search=${encodeURIComponent(debouncedSearch)}`);
-  }, [debouncedSearch, hasSearchInteraction, navigate]);
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-
     const trimmedSearch = search.trim();
     navigate(trimmedSearch ? `/events?search=${encodeURIComponent(trimmedSearch)}` : '/events');
   };
@@ -121,10 +112,8 @@ export default function LandingPage() {
               <input
                 type="text"
                 value={search}
-                onChange={e => {
-                  setSearch(e.target.value);
-                  setHasSearchInteraction(true);
-                }}
+                onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch(e as any)}
                 placeholder="Cari event, konser, workshop..."
                 className="flex-1 px-3 py-4 text-sm text-gray-800 placeholder-gray-400 outline-none bg-transparent"
               />
@@ -136,7 +125,7 @@ export default function LandingPage() {
               </button>
             </div>
           </form>
-          <p className="mt-3 text-xs text-gray-400">Pencarian akan berjalan otomatis setelah kamu berhenti mengetik.</p>
+          <p className="mt-3 text-xs text-gray-400">Tekan Enter atau klik Cari untuk mencari event.</p>
 
           {/* stats */}
           <div className="flex items-center justify-center gap-8 mt-12 flex-wrap">
@@ -197,7 +186,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Event Terbaru</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Event Akan Datang</h2>
               <p className="text-sm text-gray-400 mt-1">Jangan sampai kehabisan tiket</p>
             </div>
             <Link to="/events" className="text-sm font-semibold text-primary-900 hover:text-primary-800 flex items-center gap-1">

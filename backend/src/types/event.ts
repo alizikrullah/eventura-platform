@@ -43,7 +43,7 @@ export interface EventFilters {
   category?: number
   location?: string
   search?: string
-  sort?: 'newest' | 'oldest' | 'price_low' | 'price_high' | 'popular'
+  sort?: 'newest' | 'oldest' | 'upcoming' | 'price_low' | 'price_high' | 'popular'
   date_from?: string
   date_to?: string
 }

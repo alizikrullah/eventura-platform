@@ -279,10 +279,7 @@ export default function CheckoutPage() {
           setSubmitError('Pembayaran gagal. Coba lagi.');
           setSubmitting(false);
         },
-        onClose: () => {
-          setSubmitError('Pembayaran dibatalkan.');
-          setSubmitting(false);
-        },
+        onClose: () => navigate('/transactions'),
       });
     } catch (err: any) {
       setSubmitError(err.response?.data?.message || 'Gagal membuat transaksi. Coba lagi.');
