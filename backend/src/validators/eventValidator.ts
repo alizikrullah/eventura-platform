@@ -167,12 +167,17 @@ export const validateEventFilters = (
 
   if (
     sort &&
-    !["newest", "oldest", "price_low", "price_high", "popular"].includes(
-      sort as string,
-    )
+    ![
+      "newest",
+      "oldest",
+      "upcoming",
+      "price_low",
+      "price_high",
+      "popular",
+    ].includes(sort as string)
   ) {
     errors.push(
-      "Sort must be one of: newest, oldest, price_low, price_high, popular",
+      "Sort must be one of: newest, oldest, upcoming, price_low, price_high, popular",
     );
   }
 

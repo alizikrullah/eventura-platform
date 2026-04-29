@@ -70,6 +70,8 @@ export const getAllEvents = async (filters: EventFilters) => {
 
   if (sort === "oldest") {
     orderBy = { created_at: "asc" };
+  } else if (sort === "upcoming") {
+    orderBy = { start_date: "asc" };
   } else if (sort === "popular") {
     // Popular = least available seats (most sold)
     orderBy = { available_seats: "asc" };
